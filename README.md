@@ -661,3 +661,11 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Build penuh run [44506445513](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44506445513) selesai dengan status gagal pada kompilasi `ppc/ppc_recomp.297.cpp` karena GCC devkitA64 tidak menyediakan `__builtin_debugtrap`.
 - Ditambahkan pemetaan kompatibilitas GCC pada `ppc/ppc_context.h` ke `__builtin_trap()`. File PPC hasil generasi tidak diubah.
 - Validasi build penuh berikutnya masih diperlukan; belum ada artefak NRO penuh yang dihasilkan dari run tersebut.
+
+
+### Tahap kompilasi runtime Switch (2026-11-19)
+
+- Perbaikan kompatibilitas GCC untuk `__builtin_assume`, `__builtin_rotateleft32/64`, dan `__builtin_debugtrap` berhasil melewati seluruh 1.413 translation unit PPC; pustaka `ppc_recomp` berhasil ditautkan.
+- Build penuh run [44521750249](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44521750249) masih gagal saat mulai mengompilasi `runtime/apu/audio.cpp` dan `runtime/apu/xma.cpp`.
+- Error baru: `aarch64-none-elf-g++: fatal error: cannot specify '-o' with '-c', '-S' or '-E' with multiple files`. Tahap pengemasan NRO belum tercapai; artefak NRO belum tersedia.
+- Langkah berikutnya: tampilkan perintah kompilasi CMake secara verbose untuk mengisolasi mengapa compiler menerima lebih dari satu berkas sumber dalam satu pemanggilan.
