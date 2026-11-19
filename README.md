@@ -63,6 +63,25 @@ Angka di bawah adalah hasil pekerjaan dan pemeriksaan yang telah tercatat, bukan
 | Switch runtime | Dalam integrasi | Platform, input, audio, storage dan grafis belum terverifikasi sebagai satu game |
 | PES 2017 NRO | Sedang diupayakan melalui build full-game CI | Belum ada artefak full-game NRO yang terkonfirmasi atau bukti boot/gameplay |
 
+### 3.1 Roadmap dari tahap build sampai gameplay
+
+Urutan berikut menjadi checklist resmi pengembangan setelah status progres aktual di atas. Status hanya diubah setelah ada bukti build, log, artefak, atau pengujian perangkat yang sesuai.
+
+| Urutan | Tahap | Pekerjaan dan kriteria selesai | Status |
+|---|---|---|---|
+| 1 | **Kompilasi penuh game** | Kompilasi seluruh PPC C++, runtime PES, platform libnx, dan backend Vulkan dengan devkitA64; selesaikan seluruh error compile/link. | **Sedang berlangsung** — run [44506445513](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44506445513); validasi XEX/PPC telah lewat, tahap verifikasi SDK sedang berjalan saat pembaruan ini. |
+| 2 | **Packaging NRO** | Link dan kemas hasil full-game menjadi `build-switch/pes17.nro`; pastikan file ada, tidak kosong, dan artefak berhasil diunggah. | Menunggu tahap 1 |
+| 3 | **Audit aset dan struktur data game** | Pastikan seluruh data PES 2017 yang diperlukan tersedia pada SD card di `sdmc:/switch/PES2017/game/`, cocok dengan XEX/manifest, serta dapat diakses runtime. Tidak mengunggah aset game privat ke repositori. | Menunggu NRO |
+| 4 | **Peluncuran awal di Switch** | Salin NRO dan data game ke SD card; jalankan melalui Homebrew Menu. Lulus jika aplikasi mulai berjalan dan menghasilkan log yang dapat diperiksa tanpa crash langsung. | Menunggu tahap 2–3 |
+| 5 | **Inisialisasi runtime dan subsistem** | Verifikasi pemuatan executable hasil recompilation, guest memory, kernel imports, thread, filesystem, HID/controller, audio, dan inisialisasi Vulkan pada perangkat. Catat stub/import yang masih menghambat. | Menunggu peluncuran |
+| 6 | **Pemuatan aset dan tampilan awal game** | Verifikasi pembacaan paket/tekstur/shader/data game, lalu tampilkan logo atau loading screen tanpa crash. | Menunggu tahap 5 |
+| 7 | **Masuk menu utama PES 2017** | Tampilkan menu utama dan pastikan navigasi menu merespons input controller. | Menunggu tahap 6 |
+| 8 | **Masuk ke pertandingan** | Pilih mode/pertandingan dan pastikan proses pemuatan stadion, lapangan, tim, pemain, serta kamera berhasil. | Menunggu tahap 7 |
+| 9 | **Gameplay dasar** | Mulai pertandingan; verifikasi render pemain/lapangan, animasi, kontrol pemain, kamera, waktu pertandingan, dan audio. | Target gameplay pertama |
+| 10 | **Stabilisasi dan optimasi** | Perbaiki crash/bug visual/audio/input, ukur FPS dan penggunaan memori, optimalkan performa, lalu ulangi pengujian pada sesi pertandingan yang lebih panjang. | Setelah gameplay dasar |
+
+**Definisi selesai:** build CI sukses saja belum membuktikan game playable. Tahap gameplay baru dinyatakan tercapai setelah pertandingan benar-benar dimulai dan kontrol pemain dapat digunakan pada Nintendo Switch fisik. Setiap tahap akan diperbarui di tabel ini berdasarkan hasil aktual; tahap yang belum diuji tidak akan ditandai selesai.
+
 ### Arti hasil pengujian
 
 - **Probe BO2 Mesa (10 November 2026):** CI berhasil membangun NRO dan pengguna mengonfirmasi aplikasi terbuka pada Switch hingga menampilkan instruksi menekan HOME untuk keluar. Ini membuktikan NRO dapat diluncurkan dan mencapai loop aplikasi. Karena baris diagnostik `GIPA: PASS` atau `FAIL` belum dilaporkan secara eksplisit, pemanggilan entrypoint Vulkan dan hasil `vkEnumerateInstanceVersion` belum boleh dinyatakan lulus.
