@@ -22,7 +22,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++ libvulkan-dev
+          sudo apt-get install -y cmake ninja-build clang libvulkan-dev
       - name: Configure tests
         run: cmake -S tests -B build-tests -G Ninja -DCMAKE_BUILD_TYPE=Release
       - name: Build tests
@@ -35,6 +35,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure XenonRecomp
-        run: cmake -S third_party/XenonRecomp -B build-xenon -DCMAKE_BUILD_TYPE=Release
+        run: CC=clang CXX=clang++ cmake -S third_party/XenonRecomp -B build-xenon -DCMAKE_BUILD_TYPE=Release
       - name: Compile XenonRecomp
         run: cmake --build build-xenon --parallel 2 --target XenonRecomp
