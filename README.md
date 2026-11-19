@@ -669,3 +669,11 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Build penuh run [44521750249](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44521750249) masih gagal saat mulai mengompilasi `runtime/apu/audio.cpp` dan `runtime/apu/xma.cpp`.
 - Error baru: `aarch64-none-elf-g++: fatal error: cannot specify '-o' with '-c', '-S' or '-E' with multiple files`. Tahap pengemasan NRO belum tercapai; artefak NRO belum tersedia.
 - Langkah berikutnya: tampilkan perintah kompilasi CMake secara verbose untuk mengisolasi mengapa compiler menerima lebih dari satu berkas sumber dalam satu pemanggilan.
+
+
+### Validasi probe SDK dan fixture CMake (2026-11-20)
+
+- Probe SDK run [44573254264](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44573254264) berhasil mengompilasi 29 translation unit Vulkan, tiga adapter Switch, menautkan entrypoint Vulkan, dan menghasilkan NRO probe 14 MB.
+- Tahap konfigurasi CMake probe gagal karena fixture PPC sementara tidak membuat `ppc/XEX_TARGET` yang sesuai dengan XEX checkout, sementara argumen hash nol memaksa ketidakcocokan.
+- Fixture diperbaiki: hash dihitung dari `pes/default.xex`, lalu manifest sementara dibuat dengan title ID dan versi target yang benar. Argumen hash nol dihapus. Perbaikan ini hanya untuk pengujian konfigurasi; tidak mengubah data game maupun PPC produksi.
+- Build penuh run [44573254225](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44573254225) masih tercatat berjalan saat pembaruan ini; hasil akhir dan artefak NRO penuh belum dapat dikonfirmasi.
