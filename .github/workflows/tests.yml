@@ -29,3 +29,12 @@ jobs:
         run: cmake --build build-tests --parallel 2
       - name: Run tests
         run: ctest --test-dir build-tests --output-on-failure
+
+  recompiler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure XenonRecomp
+        run: cmake -S third_party/XenonRecomp -B build-xenon -DCMAKE_BUILD_TYPE=Release
+      - name: Compile XenonRecomp
+        run: cmake --build build-xenon --parallel 2 --target XenonRecomp
