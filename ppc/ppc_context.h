@@ -16,6 +16,22 @@
 #include <cstring>
 #include <limits>
 #include <type_traits>
+#include <bit>
+
+// GCC in devkitA64 does not provide the Clang rotate/assume builtins emitted
+// by XenonRecomp. Keep the generated PPC sources unchanged and provide
+// equivalent C++20/GCC compatibility here.
+#if defined(__GNUC__) && !defined(__clang__)
+#ifndef __builtin_assume
+#define __builtin_assume(condition) do { if (!(condition)) __builtin_unreachable(); } while (0)
+#endif
+#ifndef __builtin_rotateleft32
+#define __builtin_rotateleft32(value, shift) std::rotl(static_cast<uint32_t>(value), static_cast<int>(shift))
+#endif
+#ifndef __builtin_rotateleft64
+#define __builtin_rotateleft64(value, shift) std::rotl(static_cast<uint64_t>(value), static_cast<int>(shift))
+#endif
+#endif
 
 #include <x86/avx.h>
 #include <x86/sse.h>
