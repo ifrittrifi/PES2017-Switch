@@ -31,6 +31,9 @@
 #ifndef __builtin_rotateleft64
 #define __builtin_rotateleft64(value, shift) std::rotl(static_cast<uint64_t>(value), static_cast<int>(shift))
 #endif
+#ifndef __builtin_debugtrap
+#define __builtin_debugtrap() __builtin_trap()
+#endif
 #endif
 
 #include <x86/avx.h>
