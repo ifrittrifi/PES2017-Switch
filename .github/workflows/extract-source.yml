@@ -1,9 +1,5 @@
 name: Extract project source
 on:
-  push:
-    paths:
-      - 'pes2017-recomp-main.zip'
-      - '.github/workflows/extract-source.yml'
   workflow_dispatch:
 
 permissions:
