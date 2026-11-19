@@ -5,7 +5,7 @@
 Repositori ini mengembangkan jalur recompilation PowerPC, runtime kompatibilitas Xbox 360, lapisan platform libnx, serta backend grafis Vulkan native mengikuti arsitektur BO2-360-NX. Eksperimen NXVK dihentikan dan dipertahankan sebagai cadangan. Target akhirnya adalah menjalankan PES 2017 sebagai aplikasi homebrew Nintendo Switch (NRO), bukan menjalankan emulator Xbox 360.
 
 > [!WARNING]
-> **Status per 19 November 2026: full-game NRO masih dalam proses build dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Build full runtime PES dengan devkitA64/libnx sedang berjalan pada GitHub Actions setelah diperbaiki pemanggilan `build-switch.sh` agar dijalankan melalui Bash. Belum ada konfirmasi bahwa kompilasi/link full runtime selesai, artefak `pes17.nro` berhasil dibuat, atau game berjalan pada Switch.
+> **Status per 19 November 2026: full-game NRO masih dalam proses build dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Run full-game build `44504601916` telah melewati validasi XEX/PPC dan verifikasi SDK BO2 Mesa, tetapi gagal saat kompilasi C++ karena GCC devkitA64 tidak mengenali builtin `__builtin_assume`, `__builtin_rotateleft32`, dan `__builtin_rotateleft64`. Pemanggilan `build-switch.sh` melalui Bash sudah diperbaiki. Kompatibilitas GCC kini ditambahkan terpusat di `ppc/ppc_context.h` memakai `std::rotl` (C++20) dan `__builtin_unreachable`, tanpa mengubah file PPC hasil generasi; perubahan ini menunggu validasi build berikutnya. Belum ada artefak full-game `pes17.nro` yang terkonfirmasi atau bukti game berjalan pada Switch.
 
 ---
 
@@ -59,7 +59,7 @@ Angka di bawah adalah hasil pekerjaan dan pemeriksaan yang telah tercatat, bukan
 | Kernel imports | 281 teridentifikasi | 212 sudah memiliki implementasi; 69 masih stub |
 | Bootstrap libnx | Build CI berhasil | Aplikasi uji platform dan controller, bukan game |
 | NXVK (cadangan) | Eksperimen dihentikan | Jalur lama dipertahankan sebagai opsi legacy; tidak menjadi jalur build default |
-| Vulkan native (jalur aktif) | SDK BO2 Mesa berhasil diverifikasi; full-game build sedang berjalan | Kompilasi/link runtime penuh, artefak NRO, GIPA/instance/device pada konsol, scene PES, dan gameplay belum terkonfirmasi |
+| Vulkan native (jalur aktif) | SDK BO2 Mesa berhasil diverifikasi; kompilasi full-game pertama mencapai PPC C++ lalu gagal pada builtin GCC yang belum kompatibel; shim kompatibilitas ditambahkan di `ppc/ppc_context.h` | Perlu validasi ulang kompilasi/link runtime, artefak NRO, GIPA/instance/device pada konsol, scene PES, dan gameplay |
 | Switch runtime | Dalam integrasi | Platform, input, audio, storage dan grafis belum terverifikasi sebagai satu game |
 | PES 2017 NRO | Sedang diupayakan melalui build full-game CI | Belum ada artefak full-game NRO yang terkonfirmasi atau bukti boot/gameplay |
 
