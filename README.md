@@ -654,3 +654,10 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Refreshed full-renderer SDK probe queued: [run 42926688441](https://github.com/awaludinkurniawanwijaya/PES2017-Switch/actions/runs/42926688441).
 
 **Validasi terbaru (2026-11-11):** CTest passed for the current documentation HEAD `baafb1ebf46d1af316fbfd0eadf49a6eb9397f74` (run [42925400050](https://github.com/awaludinkurniawanwijaya/PES2017-Switch/actions/runs/42925400050)). The BO2 Mesa Switch SDK probe also berhasil diselesaikan for the Device extension-deduplication code commit `dc9d788ed72ecac4bb31538069d4138d62de63e4` (run [42925275792](https://github.com/awaludinkurniawanwijaya/PES2017-Switch/actions/runs/42925275792)); artifact `pes17-vulkan-bo2-probe` ID `13813836384`, 8,114,137 bytes, SHA-256 `82645e76d3736495d4a8d650022c22f206074d774372faf2334c8f91b0277e2e`, is available [here](https://github.com/awaludinkurniawanwijaya/PES2017-Switch/actions/runs/42925275792/artifacts/13813836384). The probe compiled the Vulkan runtime translation units selected by the workflow; `renderer_draw.cpp` and `renderer_resolve.cpp` masih ditunda because they require private XenonRecomp-generated PPC output. This is a diagnostic entrypoint probe, not proof of full PES game linking, Vulkan rendering, boot, or gameplay.
+
+
+### Kompatibilitas builtin debugtrap GCC (2026-11-19)
+
+- Build penuh run [44506445513](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44506445513) selesai dengan status gagal pada kompilasi `ppc/ppc_recomp.297.cpp` karena GCC devkitA64 tidak menyediakan `__builtin_debugtrap`.
+- Ditambahkan pemetaan kompatibilitas GCC pada `ppc/ppc_context.h` ke `__builtin_trap()`. File PPC hasil generasi tidak diubah.
+- Validasi build penuh berikutnya masih diperlukan; belum ada artefak NRO penuh yang dihasilkan dari run tersebut.
