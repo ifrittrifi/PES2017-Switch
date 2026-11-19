@@ -103,7 +103,7 @@ jobs:
               test -s /mesa-sdk/lib/libvulkan.a
               test -s /mesa-sdk/lib/libzstd.a
               bash -n ./build-switch.sh
-              ./build-switch.sh
+              bash ./build-switch.sh
               test -s build-switch/pes17.nro
               file build-switch/pes17.nro
               sha256sum build-switch/pes17.nro
