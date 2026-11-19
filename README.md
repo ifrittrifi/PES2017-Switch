@@ -5,7 +5,7 @@
 Repositori ini mengembangkan jalur recompilation PowerPC, runtime kompatibilitas Xbox 360, lapisan platform libnx, serta backend grafis Vulkan native mengikuti arsitektur BO2-360-NX. Eksperimen NXVK dihentikan dan dipertahankan sebagai cadangan. Target akhirnya adalah menjalankan PES 2017 sebagai aplikasi homebrew Nintendo Switch (NRO), bukan menjalankan emulator Xbox 360.
 
 > [!WARNING]
-> **Status per 11 November 2026: belum playable.** Jalur aktif memakai SDK Mesa statis dari build kit BO2 yang dipatok. CI kini berhasil mengompilasi seluruh 29 translation unit Vulkan (termasuk draw dan resolve), tiga adapter Switch (platform, audio, controller), membangun probe NRO, dan mengonfigurasi target CMake native dengan stand-in PPC sementara yang hanya dipakai CI. Ini belum merupakan kompilasi/link full runtime PES: file PPC hasil XenonRecomp dan manifest XEX privat belum tersedia di CI. Hasil diagnostik GIPA/instance/device pada jalur aktif juga belum tercatat dari konsol fisik. Belum ada bukti scene PES atau gameplay pada jalur aktif.
+> **Status per 19 November 2026: full-game NRO masih dalam proses build dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Build full runtime PES dengan devkitA64/libnx sedang berjalan pada GitHub Actions setelah diperbaiki pemanggilan `build-switch.sh` agar dijalankan melalui Bash. Belum ada konfirmasi bahwa kompilasi/link full runtime selesai, artefak `pes17.nro` berhasil dibuat, atau game berjalan pada Switch.
 
 ---
 
@@ -42,7 +42,6 @@ Semua validasi recompilation yang tercatat dalam pekerjaan ini menggunakan execu
 
 Versi Eropa memiliki varian yang perbedaannya dapat berupa isi bahasa. Untuk hasil recompilation yang konsisten, executable yang dipakai harus sama dengan target yang diverifikasi di atas; jangan mencampur PPC hasil generate dari executable berbeda.
 
-Referensi pemilihan salinan game: [panduan PES 2017 pada XenonRecomp](https://github.com/dzakyraf/pes2017-recomp#which-copy-of-the-game-you-need).
 
 **Game wajib berasal dari salinan milik pengguna sendiri.** Repositori ini tidak menyediakan `default.xex`, image disc, CPK, aset game, atau hasil PPC yang dihasilkan dari executable tersebut.
 
@@ -53,16 +52,16 @@ Angka di bawah adalah hasil pekerjaan dan pemeriksaan yang telah tercatat, bukan
 | Komponen | Hasil saat ini | Keterangan |
 |---|---|---|
 | Validasi XEX | Berhasil | Pemeriksaan struktur XEX2, Title ID, versi, ukuran, dan SHA-256 |
-| PPC recompilation | Selesai pada build lokal | 1.413 file `ppc_recomp.*.cpp` dihasilkan |
+| PPC recompilation | Selesai dan tersedia di repositori privat | 1.413 file `ppc_recomp.*.cpp` dihasilkan dan lolos validasi CI |
 | Total isi direktori PPC | 1.421 file | Termasuk file pendukung dan manifest |
 | Analisis instruksi | Masih ada pekerjaan | 44 word belum ter-decode pada laporan recompilation |
 | Analisis jump table | Masih ada pekerjaan | 2 dispatch terlewat pada laporan analisis |
 | Kernel imports | 281 teridentifikasi | 212 sudah memiliki implementasi; 69 masih stub |
 | Bootstrap libnx | Build CI berhasil | Aplikasi uji platform dan controller, bukan game |
 | NXVK (cadangan) | Eksperimen dihentikan | Jalur lama dipertahankan sebagai opsi legacy; tidak menjadi jalur build default |
-| Vulkan native (jalur aktif) | Probe NRO BO2 Mesa berhasil dibangun; CI mengompilasi 29 TU Vulkan dan tiga adapter Switch serta mengonfigurasi target native CMake | GIPA/instance/device pada konsol, full runtime link, scene PES, dan gameplay belum terkonfirmasi |
+| Vulkan native (jalur aktif) | SDK BO2 Mesa berhasil diverifikasi; full-game build sedang berjalan | Kompilasi/link runtime penuh, artefak NRO, GIPA/instance/device pada konsol, scene PES, dan gameplay belum terkonfirmasi |
 | Switch runtime | Dalam integrasi | Platform, input, audio, storage dan grafis belum terverifikasi sebagai satu game |
-| PES 2017 NRO | Belum tersedia | Belum ada full-game NRO yang terbukti boot atau playable |
+| PES 2017 NRO | Sedang diupayakan melalui build full-game CI | Belum ada artefak full-game NRO yang terkonfirmasi atau bukti boot/gameplay |
 
 ### Arti hasil pengujian
 
