@@ -1,0 +1,31 @@
+name: Source tests
+
+on:
+  push:
+    paths:
+      - 'runtime/**'
+      - 'tests/**'
+      - 'third_party/XenonRecomp/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/tests.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ libvulkan-dev
+      - name: Configure tests
+        run: cmake -S tests -B build-tests -G Ninja -DCMAKE_BUILD_TYPE=Release
+      - name: Build tests
+        run: cmake --build build-tests --parallel 2
+      - name: Run tests
+        run: ctest --test-dir build-tests --output-on-failure
