@@ -45,7 +45,7 @@ cmake -S "$ROOT" -B "$BUILD_DIR" \
   -DPES17_USE_SDL=OFF \
   -DPES17_SWITCH_VULKAN_SDK="$PES17_SWITCH_VULKAN_SDK"
 
-cmake --build "$BUILD_DIR" --target pes17 --parallel "$JOBS"
+cmake --build "$BUILD_DIR" --target pes17 --parallel "$JOBS" --verbose
 test -s "$BUILD_DIR/pes17.nro" || fail "CMake completed but pes17.nro was not produced"
 
 printf '\nSwitch NRO ready: %s\n' "$BUILD_DIR/pes17.nro"
