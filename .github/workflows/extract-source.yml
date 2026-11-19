@@ -1,0 +1,78 @@
+name: Extract project source
+on:
+  push:
+    paths:
+      - 'pes2017-recomp-main.zip'
+      - '.github/workflows/extract-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract source archive safely
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import PurePosixPath
+          from zipfile import ZipFile
+          from pathlib import Path
+          import shutil
+
+          archive = Path("pes2017-recomp-main.zip")
+          if not archive.is_file():
+              raise SystemExit("Archive pes2017-recomp-main.zip tidak ditemukan")
+
+          with ZipFile(archive) as z:
+              entries = [i for i in z.infolist() if not i.is_dir()]
+              names = [PurePosixPath(i.filename) for i in entries]
+              # Strip one shared wrapper directory (e.g. pes2017-recomp-main/)
+              first_parts = {p.parts[0] for p in names if p.parts}
+              strip_root = len(first_parts) == 1 and all(len(p.parts) > 1 for p in names)
+              excluded = []
+              extracted = 0
+
+              for info, p in zip(entries, names):
+                  parts = p.parts[1:] if strip_root else p.parts
+                  if not parts or p.is_absolute() or ".." in parts:
+                      excluded.append(info.filename)
+                      continue
+                  rel = PurePosixPath(*parts)
+                  # Never import repository metadata or proprietary game payloads.
+                  if rel.parts[0] in {".git", "__MACOSX"} or rel.suffix.lower() in {".xex", ".pcc"}:
+                      excluded.append(info.filename)
+                      continue
+                  target = Path(".").joinpath(*rel.parts)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  with z.open(info) as src, target.open("wb") as dst:
+                      shutil.copyfileobj(src, dst)
+                  extracted += 1
+
+          print(f"Extracted files: {extracted}")
+          print(f"Excluded files: {len(excluded)}")
+          for item in excluded[:100]:
+              print(f"EXCLUDED: {item}")
+          if extracted == 0:
+              raise SystemExit("Tidak ada file sumber yang berhasil diekstrak")
+          PY
+
+      - name: Commit extracted project
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No extracted changes to commit."
+          else
+            git commit -m "Extract PES 2017 recomp source archive"
+            git push
+          fi
