@@ -198,10 +198,14 @@ target_link_libraries(pes17 PRIVATE ppc_recomp)
 # ppc_recomp_shared.h declares a function taking uint8_t before every includer has <cstdint>.
 # Keep both forced includes in one SHELL group so CMake preserves each -include pair.
 if(PES17_SWITCH)
+    # Keep each forced include in its own SHELL group. CMake de-duplicates
+    # repeated -include options inside one group, accidentally turning the
+    # second header path into an extra compiler input (.cpp + .h).
     target_compile_options(pes17 PRIVATE
-        "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint -include \"${CMAKE_SOURCE_DIR}/runtime/gpu/vulkan/loader.h\">")
+        "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint>"
+        "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include \"${CMAKE_SOURCE_DIR}/runtime/gpu/vulkan/loader.h\">")
 else()
-    target_compile_options(pes17 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint>)
+    target_compile_options(pes17 PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint>")
 endif()
 target_compile_definitions(pes17 PRIVATE ${PES17_ONLINE_DEFINITIONS})
 if(PES17_DIAGNOSTICS)
