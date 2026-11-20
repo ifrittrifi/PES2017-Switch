@@ -184,11 +184,17 @@ namespace
     void NoteFrameCost()
     {
         if constexpr (!diag::kOn) return;
+        const int64_t wallNow = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+#if defined(CLOCK_THREAD_CPUTIME_ID)
         timespec cpu{};
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &cpu);
         const int64_t cpuNow = int64_t(cpu.tv_sec) * 1000000000 + cpu.tv_nsec;
-        const int64_t wallNow = std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
+#else
+        // Horizon does not expose CLOCK_THREAD_CPUTIME_ID. Diagnostics are
+        // disabled on the Switch target; keep this translation unit portable.
+        const int64_t cpuNow = wallNow;
+#endif
         if (g.lastSwapWall)
         {
             g.frameCpu[FrameBin(double(cpuNow - g.lastSwapCpu) / 1e6)]++;
