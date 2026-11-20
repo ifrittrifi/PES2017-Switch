@@ -696,3 +696,6 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Probe SDK sebelumnya juga berhenti pada fixture manifest karena quoting shell bertingkat. Penulisan `ppc/XEX_TARGET` dirapikan agar tidak memicu ekspansi variabel oleh shell pembungkus.
 - Perbaikan dikirim ke branch `work/switch-libnx-platform`; workflow build penuh dan probe SDK dijalankan ulang otomatis dari perubahan ini.
 - Status NRO game penuh: **belum berhasil dikonfirmasi**. NRO probe Vulkan bukan NRO game PES 2017.
+
+- Untuk menghindari deduplikasi opsi `-include` oleh CMake, kedua header wajib Switch kini digabung dalam `runtime/switch/force_include.h`; target game hanya memakai satu opsi forced-include.
+- Fixture probe menulis manifest dengan newline shell yang benar.
