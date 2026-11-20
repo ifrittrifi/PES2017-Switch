@@ -18,6 +18,14 @@ FetchContent_Declare(ffmpeg_xma
 FetchContent_MakeAvailable(ffmpeg_xma)
 set(FFMPEG_SRC "${ffmpeg_xma_SOURCE_DIR}")
 
+# The Switch sysroot may also provide libavcodec headers. Keep this pinned
+# Xenia FFmpeg fork ahead of devkitPro's portlibs for consumers of ffmpeg_xma;
+# otherwise runtime/apu/xma.cpp can silently include the system codec_id.h,
+# which does not declare AV_CODEC_ID_XMAFRAMES.
+if(TARGET pes17)
+    target_include_directories(pes17 BEFORE PRIVATE "${FFMPEG_SRC}")
+endif()
+
 set(FFMPEG_SOURCES
     ${FFMPEG_SRC}/libavcodec/aactab.c
     ${FFMPEG_SRC}/libavcodec/ac3_parser.c
