@@ -7,7 +7,7 @@
 Repositori ini mengembangkan jalur recompilation PowerPC, runtime kompatibilitas Xbox 360, lapisan platform libnx, serta backend grafis Vulkan native mengikuti arsitektur BO2-360-NX. Eksperimen NXVK dihentikan dan dipertahankan sebagai cadangan. Target akhirnya adalah menjalankan PES 2017 sebagai aplikasi homebrew Nintendo Switch (NRO), bukan menjalankan emulator Xbox 360.
 
 > [!WARNING]
-> **Status per 20 November 2026: full-game NRO belum berhasil dibangun dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Build full-game `44663862751` telah melewati validasi XEX/PPC, verifikasi SDK BO2 Mesa, kompilasi seluruh 1.413 translation unit PPC, dan pembuatan arsip `libppc_recomp.a`, tetapi gagal saat kompilasi runtime audio karena `runtime/apu/xma.cpp` mengambil header FFmpeg yang salah sehingga `AV_CODEC_ID_XMAFRAMES` tidak ditemukan. Urutan include diperbaiki agar header dari FFmpeg fork Xenia yang dipatok diprioritaskan di atas header portlibs Switch. Perbaikan ini menunggu validasi build berikutnya. Belum ada artefak full-game `pes17.nro` yang terkonfirmasi atau bukti game berjalan pada Switch.
+> **Status per 20 November 2026: full-game NRO belum berhasil dibangun dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Build full-game `44663862751` telah melewati validasi XEX/PPC, verifikasi SDK BO2 Mesa, kompilasi seluruh 1.413 translation unit PPC, dan pembuatan arsip `libppc_recomp.a`, tetapi gagal saat kompilasi runtime audio karena `runtime/apu/xma.cpp` mengambil header FFmpeg yang salah sehingga `AV_CODEC_ID_XMAFRAMES` tidak ditemukan. Urutan include diperbaiki agar header dari FFmpeg fork Xenia yang dipatok diprioritaskan di atas header portlibs Switch. Perbaikan ini sedang divalidasi pada full-game run [44702060226](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44702060226). Belum ada artefak full-game `pes17.nro` yang terkonfirmasi atau bukti game berjalan pada Switch.
 
 ---
 
@@ -725,4 +725,4 @@ Penyebabnya adalah urutan include: header FFmpeg dari portlibs Switch dapat dipi
 
 Commit perbaikan: `9bd4c278096a055bb2aff0bf1296e5aebd77d4d2`.
 
-**Status:** perbaikan sudah masuk ke branch `work/switch-libnx-platform`; hasil kompilasi ulang belum tersedia. NRO full-game belum dihasilkan atau diverifikasi.
+**Status:** perbaikan sudah masuk ke branch `work/switch-libnx-platform`; full-game run [44702060226](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44702060226) sedang berjalan. NRO full-game belum dihasilkan atau diverifikasi.
