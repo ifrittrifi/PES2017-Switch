@@ -726,3 +726,13 @@ Penyebabnya adalah urutan include: header FFmpeg dari portlibs Switch dapat dipi
 Commit perbaikan: `9bd4c278096a055bb2aff0bf1296e5aebd77d4d2`.
 
 **Status:** perbaikan sudah masuk ke branch `work/switch-libnx-platform`; full-game run [44702060226](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44702060226) sedang berjalan. NRO full-game belum dihasilkan atau diverifikasi.
+
+## Catatan progres 20 November 2026 — kompatibilitas clock Horizon
+
+Build full-game [run 44702060226](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44702060226) melewati kompilasi decoder XMA dan sejumlah sumber runtime, tetapi gagal pada `runtime/gpu/command_processor.cpp:188`: `CLOCK_THREAD_CPUTIME_ID` tidak tersedia di sysroot Horizon/devkitA64.
+
+Perbaikan di `runtime/gpu/command_processor.cpp` memakai `CLOCK_THREAD_CPUTIME_ID` bila platform menyediakannya. Pada platform yang tidak menyediakan konstanta tersebut, termasuk Switch, penghitung diagnostik memakai nilai `steady_clock` yang sama dengan wall clock. Diagnostik memang dinonaktifkan untuk target Switch; fallback ini menjaga kompilasi lintas platform tanpa mengubah jalur gameplay.
+
+Commit perbaikan: `127fac807f854f7956541159a51be6b7554eb70f`.
+
+**Status:** perubahan sudah masuk ke branch `work/switch-libnx-platform`; build otomatis dari commit ini sedang dipantau. NRO full-game belum dihasilkan atau diverifikasi.
