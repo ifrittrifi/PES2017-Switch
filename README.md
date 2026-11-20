@@ -7,7 +7,7 @@
 Repositori ini mengembangkan jalur recompilation PowerPC, runtime kompatibilitas Xbox 360, lapisan platform libnx, serta backend grafis Vulkan native mengikuti arsitektur BO2-360-NX. Eksperimen NXVK dihentikan dan dipertahankan sebagai cadangan. Target akhirnya adalah menjalankan PES 2017 sebagai aplikasi homebrew Nintendo Switch (NRO), bukan menjalankan emulator Xbox 360.
 
 > [!WARNING]
-> **Status per 19 November 2026: full-game NRO masih dalam proses build dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Run full-game build `44504601916` telah melewati validasi XEX/PPC dan verifikasi SDK BO2 Mesa, tetapi gagal saat kompilasi C++ karena GCC devkitA64 tidak mengenali builtin `__builtin_assume`, `__builtin_rotateleft32`, dan `__builtin_rotateleft64`. Pemanggilan `build-switch.sh` melalui Bash sudah diperbaiki. Kompatibilitas GCC kini ditambahkan terpusat di `ppc/ppc_context.h` memakai `std::rotl` (C++20) dan `__builtin_unreachable`, tanpa mengubah file PPC hasil generasi; perubahan ini sedang divalidasi pada run full-game `44506445513`; pada pemeriksaan terakhir run masih berstatus berjalan dan tahap verifikasi SDK belum selesai. Belum ada artefak full-game `pes17.nro` yang terkonfirmasi atau bukti game berjalan pada Switch.
+> **Status per 20 November 2026: full-game NRO belum berhasil dibangun dan belum playable.** Repositori kini memiliki `default.xex`, manifest target, dan hasil PPC hasil XenonRecomp; pemeriksaan CI untuk identitas XEX dan jumlah file PPC berhasil. SDK Vulkan statis BO2 Mesa juga berhasil diunduh dan diverifikasi. Build full-game `44663862751` telah melewati validasi XEX/PPC, verifikasi SDK BO2 Mesa, kompilasi seluruh 1.413 translation unit PPC, dan pembuatan arsip `libppc_recomp.a`, tetapi gagal saat kompilasi runtime audio karena `runtime/apu/xma.cpp` mengambil header FFmpeg yang salah sehingga `AV_CODEC_ID_XMAFRAMES` tidak ditemukan. Urutan include diperbaiki agar header dari FFmpeg fork Xenia yang dipatok diprioritaskan di atas header portlibs Switch. Perbaikan ini menunggu validasi build berikutnya. Belum ada artefak full-game `pes17.nro` yang terkonfirmasi atau bukti game berjalan pada Switch.
 
 ---
 
@@ -71,7 +71,7 @@ Urutan berikut menjadi checklist resmi pengembangan setelah status progres aktua
 
 | Urutan | Tahap | Pekerjaan dan kriteria selesai | Status |
 |---|---|---|---|
-| 1 | **Kompilasi penuh game** | Kompilasi seluruh PPC C++, runtime PES, platform libnx, dan backend Vulkan dengan devkitA64; selesaikan seluruh error compile/link. | **Sedang berlangsung** — run [44506445513](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44506445513); validasi XEX/PPC telah lewat, tahap verifikasi SDK sedang berjalan saat pembaruan ini. |
+| 1 | **Kompilasi penuh game** | Kompilasi seluruh PPC C++, runtime PES, platform libnx, dan backend Vulkan dengan devkitA64; selesaikan seluruh error compile/link. | **Gagal pada kompilasi runtime audio** — run [44663862751](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44663862751); semua 1.413 translation unit PPC berhasil dikompilasi dan diarsipkan. Perbaikan prioritas header FFmpeg sudah dikomit dan menunggu build ulang. |
 | 2 | **Packaging NRO** | Link dan kemas hasil full-game menjadi `build-switch/pes17.nro`; pastikan file ada, tidak kosong, dan artefak berhasil diunggah. | Menunggu tahap 1 |
 | 3 | **Audit aset dan struktur data game** | Pastikan seluruh data PES 2017 yang diperlukan tersedia pada SD card di `sdmc:/switch/PES2017/game/`, cocok dengan XEX/manifest, serta dapat diakses runtime. Tidak mengunggah aset game privat ke repositori. | Menunggu NRO |
 | 4 | **Peluncuran awal di Switch** | Salin NRO dan data game ke SD card; jalankan melalui Homebrew Menu. Lulus jika aplikasi mulai berjalan dan menghasilkan log yang dapat diperiksa tanpa crash langsung. | Menunggu tahap 2–3 |
@@ -706,3 +706,23 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Probe terbaru [run 44663885362](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44663885362) berstatus **success**. Ini mengonfirmasi unduhan/verifikasi SDK BO2 Mesa Horizon, kompilasi komponen probe, pengemasan NRO probe, serta konfigurasi target CMake Switch dengan fixture PPC.
 - Build game penuh [run 44663862751](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44663862751) masih berada pada tahap **Build full PES runtime and package NRO**. Log dan artefak NRO game belum tersedia untuk diverifikasi.
 - Keberhasilan probe SDK bukan bukti bahwa game penuh telah berhasil dikompilasi atau dapat dimainkan. Status NRO PES 2017 penuh tetap **menunggu hasil build**.
+
+
+## Catatan progres 20 November 2026 — perbaikan header XMA
+
+Build full-game [run 44663862751](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44663862751) berakhir gagal pada `runtime/apu/xma.cpp:307` dengan pesan:
+
+```text
+error: 'AV_CODEC_ID_XMAFRAMES' was not declared in this scope
+```
+
+Tahap sebelum error telah berhasil:
+- Validasi identitas XEX dan 1.413 file PPC.
+- Unduh serta verifikasi SDK Vulkan BO2 Mesa.
+- Kompilasi semua translation unit PPC dan pembuatan `libppc_recomp.a`.
+
+Penyebabnya adalah urutan include: header FFmpeg dari portlibs Switch dapat dipilih lebih dahulu daripada header FFmpeg fork Xenia yang menyediakan `AV_CODEC_ID_XMAFRAMES`. Perbaikan di `third_party/ffmpeg-xenia/CMakeLists.txt` menempatkan direktori header FFmpeg fork tersebut di depan include path target `pes17`. Ini mempertahankan decoder XMA per-frame yang dibutuhkan runtime; mengganti codec ke XMA2 biasa bukan solusi yang setara.
+
+Commit perbaikan: `9bd4c278096a055bb2aff0bf1296e5aebd77d4d2`.
+
+**Status:** perbaikan sudah masuk ke branch `work/switch-libnx-platform`; hasil kompilasi ulang belum tersedia. NRO full-game belum dihasilkan atau diverifikasi.
