@@ -699,3 +699,10 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 
 - Untuk menghindari deduplikasi opsi `-include` oleh CMake, kedua header wajib Switch kini digabung dalam `runtime/switch/force_include.h`; target game hanya memakai satu opsi forced-include.
 - Fixture probe menulis manifest dengan newline shell yang benar.
+
+
+## Validasi SDK Vulkan BO2 berhasil (2026-11-20)
+
+- Probe terbaru [run 44663885362](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44663885362) berstatus **success**. Ini mengonfirmasi unduhan/verifikasi SDK BO2 Mesa Horizon, kompilasi komponen probe, pengemasan NRO probe, serta konfigurasi target CMake Switch dengan fixture PPC.
+- Build game penuh [run 44663862751](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44663862751) masih berada pada tahap **Build full PES runtime and package NRO**. Log dan artefak NRO game belum tersedia untuk diverifikasi.
+- Keberhasilan probe SDK bukan bukti bahwa game penuh telah berhasil dikompilasi atau dapat dimainkan. Status NRO PES 2017 penuh tetap **menunggu hasil build**.
