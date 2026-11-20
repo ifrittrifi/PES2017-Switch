@@ -687,3 +687,12 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Workflow probe diperbaiki dengan mengambil hash tanpa `awk` dan menulis manifest fixture menggunakan format `printf` yang aman terhadap quoting bertingkat.
 - Perbaikan kode: commit [6351f2d](https://github.com/ifrittrifi/PES2017-Switch/commit/6351f2d09c8ab17b5c5a9c30aa568755bc225fe2). Perbaikan probe: commit [1939a1d](https://github.com/ifrittrifi/PES2017-Switch/commit/1939a1d218d6f1782629e900d2ae3a99ec5a474b).
 - Kedua perubahan memicu validasi ulang otomatis. NRO PES 2017 penuh belum berhasil dibuat atau dikonfirmasi.
+
+
+## Perbaikan kompilasi Switch dan validasi SDK (2026-11-20)
+
+- Build penuh sebelumnya telah menyelesaikan kompilasi seluruh unit PPC, lalu gagal pada `runtime/apu/audio.cpp` dan `runtime/apu/xma.cpp`. Penyebabnya adalah opsi forced-include CMake yang terduplikasi: path `runtime/gpu/vulkan/loader.h` diteruskan sebagai input compiler tambahan, bukan sebagai header yang di-`include`.
+- Opsi forced-include kini dipisah menjadi dua grup `SHELL` agar CMake tidak menghapus pasangan `-include` kedua.
+- Probe SDK sebelumnya juga berhenti pada fixture manifest karena quoting shell bertingkat. Penulisan `ppc/XEX_TARGET` dirapikan agar tidak memicu ekspansi variabel oleh shell pembungkus.
+- Perbaikan dikirim ke branch `work/switch-libnx-platform`; workflow build penuh dan probe SDK dijalankan ulang otomatis dari perubahan ini.
+- Status NRO game penuh: **belum berhasil dikonfirmasi**. NRO probe Vulkan bukan NRO game PES 2017.
