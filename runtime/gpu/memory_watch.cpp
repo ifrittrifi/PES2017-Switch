@@ -1,5 +1,23 @@
 #include "memory_watch.h"
 
+#if defined(__SWITCH__)
+// Horizon does not expose POSIX mprotect/signal page watching. The Switch
+// runtime uses the direct guest-memory path; keep the optional shadow-watch
+// interface inert on this target.
+namespace gpu::watch
+{
+    void SetShadow(uint8_t*, uint32_t) {}
+    bool Enabled() { return false; }
+    bool HandleFault(const void*) { return false; }
+    void WillWrite(uint32_t, uint32_t) {}
+    bool Serve(uint32_t, uint32_t, uint64_t, uint64_t (*)(), uint64_t) { return false; }
+    uint64_t Track(uint32_t, uint32_t, uint64_t (*)(), uint64_t) { return 0; }
+    bool Unwritten(uint32_t, uint32_t, uint64_t) { return false; }
+    uint64_t FaultCount() { return 0; }
+    void Report() {}
+}
+#else
+
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -363,3 +381,5 @@ void gpu::watch::Report()
          (unsigned long long)g_faults.load(), (unsigned long long)g_bulkWrites.load(),
          (unsigned long long)g_tracked, watched, loose);
 }
+
+#endif // __SWITCH__
