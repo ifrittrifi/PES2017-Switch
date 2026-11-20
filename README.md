@@ -742,3 +742,10 @@ Commit perbaikan: `127fac807f854f7956541159a51be6b7554eb70f`.
 Build penuh run [44756292444](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44756292444) kembali gagal pada kompilasi `runtime/gpu/debug_watch.cpp:10` karena header POSIX `sys/mman.h` tidak tersedia di devkitA64/Horizon. Pada tahap ini seluruh 1.413 unit translasi PPC telah selesai dikompilasi dan library `ppc_recomp` berhasil dibuat; kegagalan terjadi saat kompilasi runtime.
 
 Perbaikan: implementasi watchpoint berbasis `mprotect()` kini dikecualikan khusus untuk target `__SWITCH__` dan diganti stub aman karena `PES17_DIAGNOSTICS=0` pada build Switch. Implementasi desktop tetap dipertahankan. Perubahan ada pada commit [4432136](https://github.com/ifrittrifi/PES2017-Switch/commit/4432136b9872f65ee02151add323bfc963a7ac01). Build penuh berikutnya diperlukan untuk memverifikasi tahap runtime dan packaging NRO; belum ada NRO game penuh yang terverifikasi.
+
+
+### Catatan progres 21 November 2026 — memory watch shadow pada Horizon
+
+Build penuh run [44777952914](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44777952914) melewati kompilasi `runtime/gpu/debug_watch.cpp`, tetapi kemudian gagal pada `runtime/gpu/memory_watch.cpp:17` karena implementasi shadow memory watch juga memakai `sys/mman.h`/POSIX `mprotect()`, yang tidak tersedia di devkitA64/Horizon. Unit PPC dan beberapa modul runtime telah terkompilasi; NRO belum dibuat.
+
+Perbaikan lanjutan: implementasi page-watch/shadow yang bergantung pada POSIX kini dinonaktifkan khusus untuk `__SWITCH__`; API `gpu::watch` tetap tersedia sebagai stub inert, sehingga jalur runtime Switch memakai salinan guest memory biasa. Implementasi platform lain tetap utuh. Commit: [d4651b4](https://github.com/ifrittrifi/PES2017-Switch/commit/d4651b4d4eee8dd563f360c4040ca2cef839be59). Build berikutnya akan memverifikasi kelanjutan kompilasi runtime hingga link dan packaging.
