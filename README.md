@@ -749,3 +749,10 @@ Perbaikan: implementasi watchpoint berbasis `mprotect()` kini dikecualikan khusu
 Build penuh run [44777952914](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44777952914) melewati kompilasi `runtime/gpu/debug_watch.cpp`, tetapi kemudian gagal pada `runtime/gpu/memory_watch.cpp:17` karena implementasi shadow memory watch juga memakai `sys/mman.h`/POSIX `mprotect()`, yang tidak tersedia di devkitA64/Horizon. Unit PPC dan beberapa modul runtime telah terkompilasi; NRO belum dibuat.
 
 Perbaikan lanjutan: implementasi page-watch/shadow yang bergantung pada POSIX kini dinonaktifkan khusus untuk `__SWITCH__`; API `gpu::watch` tetap tersedia sebagai stub inert, sehingga jalur runtime Switch memakai salinan guest memory biasa. Implementasi platform lain tetap utuh. Commit: [d4651b4](https://github.com/ifrittrifi/PES2017-Switch/commit/d4651b4d4eee8dd563f360c4040ca2cef839be59). Build berikutnya akan memverifikasi kelanjutan kompilasi runtime hingga link dan packaging.
+
+
+## Catatan progres 21 November 2026 — konversi waktu UTC pada Horizon
+
+Build penuh `44803920841` berhasil melewati kompilasi seluruh 1.413 unit PPC dan mencapai sekitar 97% kompilasi runtime. Tahap tersebut kemudian gagal karena `timegm()` tidak tersedia pada toolchain devkitA64/Horizon di `runtime/kernel/pes_imports.cpp:476`. Konversi `TIME_FIELDS` ke detik UTC kini memakai perhitungan kalender Gregorian portabel (`UtcSecondsFromTimeFields`), tanpa dependensi `timegm()`.
+
+Perbaikan kode: commit `b0cf0a307068f1689ad540a43011fc0cfa192622`. Build penuh berikutnya diperlukan untuk memverifikasi kompilasi runtime lanjutan, proses linking, dan packaging NRO. Sampai tahap tersebut berhasil, NRO game penuh belum terverifikasi.
