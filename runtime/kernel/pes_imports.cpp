@@ -225,6 +225,23 @@ namespace
 
     // ---- time ------------------------------------------------------------------
     constexpr int64_t kEpochDelta100ns = 116444736000000000LL;   // 1601 -> 1970
+
+    // Portable UTC conversion: Horizon's newlib does not provide timegm().
+    // Convert the TIME_FIELDS calendar date directly to Unix seconds.
+    int64_t UtcSecondsFromTimeFields(const std::tm& tm)
+    {
+        int64_t year = int64_t(tm.tm_year) + 1900;
+        const int64_t month = int64_t(tm.tm_mon) + 1;
+        year -= month <= 2;
+        const int64_t era = (year >= 0 ? year : year - 399) / 400;
+        const uint32_t yearOfEra = uint32_t(year - era * 400);
+        const uint32_t adjustedMonth = uint32_t(month + (month > 2 ? -3 : 9));
+        const uint32_t dayOfYear = (153 * adjustedMonth + 2) / 5 + uint32_t(tm.tm_mday - 1);
+        const uint32_t dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
+        const int64_t days = era * 146097 + int64_t(dayOfEra) - 719468;
+        return days * 86400 + int64_t(tm.tm_hour) * 3600
+             + int64_t(tm.tm_min) * 60 + int64_t(tm.tm_sec);
+    }
 }
 
 // ---- semaphores and the combined signal-and-wait -----------------------------
@@ -473,7 +490,7 @@ PPC_FUNC(__imp__RtlTimeFieldsToTime)
     std::tm tm{};
     tm.tm_year = Load16(f) - 1900; tm.tm_mon = Load16(f + 2) - 1; tm.tm_mday = Load16(f + 4);
     tm.tm_hour = Load16(f + 6); tm.tm_min = Load16(f + 8); tm.tm_sec = Load16(f + 10);
-    const int64_t seconds = int64_t(timegm(&tm));
+    const int64_t seconds = UtcSecondsFromTimeFields(tm);
     const int64_t t = seconds * 10000000LL + int64_t(Load16(f + 12)) * 10000LL + kEpochDelta100ns;
     *GuestPtr<be32>(ctx.r4.u32) = uint32_t(uint64_t(t) >> 32);
     *GuestPtr<be32>(ctx.r4.u32 + 4) = uint32_t(t);
