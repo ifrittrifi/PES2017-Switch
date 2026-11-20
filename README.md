@@ -677,3 +677,13 @@ Urutan pemisahan: (1) satukan properti perangkat fisik, properti memori, dan met
 - Tahap konfigurasi CMake probe gagal karena fixture PPC sementara tidak membuat `ppc/XEX_TARGET` yang sesuai dengan XEX checkout, sementara argumen hash nol memaksa ketidakcocokan.
 - Fixture diperbaiki: hash dihitung dari `pes/default.xex`, lalu manifest sementara dibuat dengan title ID dan versi target yang benar. Argumen hash nol dihapus. Perbaikan ini hanya untuk pengujian konfigurasi; tidak mengubah data game maupun PPC produksi.
 - Build penuh run [44573254225](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44573254225) masih tercatat berjalan saat pembaruan ini; hasil akhir dan artefak NRO penuh belum dapat dikonfirmasi.
+
+### Perbaikan argumen forced-include Vulkan dan quoting probe (2026-11-20)
+
+- Run build penuh [44573254225](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44573254225) selesai gagal pada 95%, setelah seluruh translation unit PPC berhasil dikompilasi dan pustaka `ppc_recomp` ditautkan.
+- Akar error runtime ditemukan pada perintah compiler: `loader.h` muncul sebagai argumen berkas kedua setelah `-include cstdint`, bukan sebagai berkas yang di-force-include. GCC lalu menolak kombinasi `-o` dan `-c` dengan lebih dari satu input.
+- `CMakeLists.txt` diperbaiki dengan menggabungkan kedua pasangan `-include` ke satu grup `SHELL` untuk target Switch. Build non-Switch tetap hanya memaksa `cstdint`.
+- Probe SDK run [44586684579](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44586684579) juga selesai gagal sebelum konfigurasi CMake: quoting shell bertingkat membuat `$1` pada perintah `awk` diekspansi oleh shell luar dan menghasilkan `unbound variable`.
+- Workflow probe diperbaiki dengan mengambil hash tanpa `awk` dan menulis manifest fixture menggunakan format `printf` yang aman terhadap quoting bertingkat.
+- Perbaikan kode: commit [6351f2d](https://github.com/ifrittrifi/PES2017-Switch/commit/6351f2d09c8ab17b5c5a9c30aa568755bc225fe2). Perbaikan probe: commit [1939a1d](https://github.com/ifrittrifi/PES2017-Switch/commit/1939a1d218d6f1782629e900d2ae3a99ec5a474b).
+- Kedua perubahan memicu validasi ulang otomatis. NRO PES 2017 penuh belum berhasil dibuat atau dikonfirmasi.
