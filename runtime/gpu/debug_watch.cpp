@@ -7,6 +7,16 @@
 #include <cstring>
 #include <thread>
 
+#if defined(__SWITCH__)
+// The memory watchpoint implementation uses POSIX mprotect(), which Horizon
+// does not provide. Diagnostics are disabled for the Switch target, so keep
+// the interface linkable while omitting this desktop-only instrumentation.
+namespace debugwatch
+{
+    void ArmFromFile(const std::string&) {}
+    bool HandleFault(const void*) { return false; }
+}
+#else
 #include <sys/mman.h>
 
 #include "../guest_memory.h"
@@ -192,3 +202,5 @@ bool debugwatch::HandleFault(const void* address)
     }
     return true;
 }
+
+#endif // __SWITCH__
