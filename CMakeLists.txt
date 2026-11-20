@@ -196,7 +196,13 @@ else()
 endif()
 target_link_libraries(pes17 PRIVATE ppc_recomp)
 # ppc_recomp_shared.h declares a function taking uint8_t before every includer has <cstdint>.
-target_compile_options(pes17 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint>)
+# Keep both forced includes in one SHELL group so CMake preserves each -include pair.
+if(PES17_SWITCH)
+    target_compile_options(pes17 PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint -include \"${CMAKE_SOURCE_DIR}/runtime/gpu/vulkan/loader.h\">")
+else()
+    target_compile_options(pes17 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:SHELL:-include cstdint>)
+endif()
 target_compile_definitions(pes17 PRIVATE ${PES17_ONLINE_DEFINITIONS})
 if(PES17_DIAGNOSTICS)
     target_compile_definitions(pes17 PRIVATE PES17_DIAGNOSTICS=1)
@@ -212,9 +218,7 @@ if(PES17_SWITCH)
         "$ENV{DEVKITPRO}/portlibs/switch/include")
     target_compile_definitions(pes17 PRIVATE
         __SWITCH__=1 PES17_VULKAN_DYNAMIC=1 VK_NO_PROTOTYPES=1 _GNU_SOURCE=1 _DEFAULT_SOURCE=1)
-    # Dynamic Vulkan dispatch declarations must precede every runtime TU.
-    target_compile_options(pes17 PRIVATE
-        $<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_SOURCE_DIR}/runtime/gpu/vulkan/loader.h>)
+    # Dynamic Vulkan dispatch is force-included with cstdint above.
     target_compile_options(pes17 PRIVATE
         -ffunction-sections -fdata-sections -pthread)
     target_link_options(pes17 PRIVATE -pthread -Wl,--gc-sections)
