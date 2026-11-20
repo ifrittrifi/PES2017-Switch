@@ -736,3 +736,9 @@ Perbaikan di `runtime/gpu/command_processor.cpp` memakai `CLOCK_THREAD_CPUTIME_I
 Commit perbaikan: `127fac807f854f7956541159a51be6b7554eb70f`.
 
 **Status:** perubahan sudah masuk ke branch `work/switch-libnx-platform`; build otomatis dari commit ini sedang dipantau. NRO full-game belum dihasilkan atau diverifikasi.
+
+### Catatan progres 20 November 2026 — kompatibilitas debug watchpoint Horizon
+
+Build penuh run [44756292444](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44756292444) kembali gagal pada kompilasi `runtime/gpu/debug_watch.cpp:10` karena header POSIX `sys/mman.h` tidak tersedia di devkitA64/Horizon. Pada tahap ini seluruh 1.413 unit translasi PPC telah selesai dikompilasi dan library `ppc_recomp` berhasil dibuat; kegagalan terjadi saat kompilasi runtime.
+
+Perbaikan: implementasi watchpoint berbasis `mprotect()` kini dikecualikan khusus untuk target `__SWITCH__` dan diganti stub aman karena `PES17_DIAGNOSTICS=0` pada build Switch. Implementasi desktop tetap dipertahankan. Perubahan ada pada commit [4432136](https://github.com/ifrittrifi/PES2017-Switch/commit/4432136b9872f65ee02151add323bfc963a7ac01). Build penuh berikutnya diperlukan untuk memverifikasi tahap runtime dan packaging NRO; belum ada NRO game penuh yang terverifikasi.
