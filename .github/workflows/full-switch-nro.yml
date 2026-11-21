@@ -94,7 +94,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build-switch
-          key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}-${{ inputs.mode }}
+          key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}-${{ github.event.inputs.mode || 'preflight' }}
           restore-keys: |
             switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-
 
@@ -181,7 +181,7 @@ jobs:
             '
 
       - name: Build full PES runtime and package NRO
-        if: ${{ inputs.mode == 'full' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -208,7 +208,7 @@ jobs:
             '
 
       - name: Upload full game NRO
-        if: ${{ inputs.mode == 'full' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full' }}
         uses: actions/upload-artifact@v4
         with:
           name: pes2017-switch-full-nro
