@@ -756,3 +756,12 @@ Perbaikan lanjutan: implementasi page-watch/shadow yang bergantung pada POSIX ki
 Build penuh `44803920841` berhasil melewati kompilasi seluruh 1.413 unit PPC dan mencapai sekitar 97% kompilasi runtime. Tahap tersebut kemudian gagal karena `timegm()` tidak tersedia pada toolchain devkitA64/Horizon di `runtime/kernel/pes_imports.cpp:476`. Konversi `TIME_FIELDS` ke detik UTC kini memakai perhitungan kalender Gregorian portabel (`UtcSecondsFromTimeFields`), tanpa dependensi `timegm()`.
 
 Perbaikan kode: commit `b0cf0a307068f1689ad540a43011fc0cfa192622`. Build penuh berikutnya diperlukan untuk memverifikasi kompilasi runtime lanjutan, proses linking, dan packaging NRO. Sampai tahap tersebut berhasil, NRO game penuh belum terverifikasi.
+
+
+## Catatan progres 21 November 2026 — perbaikan scope `runtime/main.cpp`
+
+Build penuh pada run [44827335012](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44827335012) telah melewati kompilasi seluruh 1.413 translation unit PPC dan mencapai kompilasi runtime 97%. Build kemudian berhenti pada `runtime/main.cpp:207` dengan pesan `expected declaration before '}' token`.
+
+Pemeriksaan menemukan blok anonymous namespace ditutup terlalu awal, sehingga fungsi `LoadImage`, `Widen`, dan `BuildFunctionTable` berada di luar scope yang dimaksud, sementara kurung penutup berikutnya menjadi tidak berpasangan. Penutup namespace dipindahkan ke posisi setelah `BuildFunctionTable`.
+
+Perbaikan kode: commit `999ec2bcd457471d018e1c7e153bca70958f8cfd`. Status NRO penuh masih belum terverifikasi; tahap berikutnya adalah menjalankan ulang build penuh dan memeriksa hasil kompilasi, linking, serta packaging.
