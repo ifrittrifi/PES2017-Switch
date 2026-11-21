@@ -53,6 +53,9 @@ namespace
                 const uint32_t start = it->first, length = it->second;
                 const uint32_t at = (start + align - 1) & ~(align - 1);
                 if (uint64_t(at) + size > uint64_t(start) + length) continue;
+                // On Switch the guest bank is mapped lazily. Commit before
+                // changing allocator bookkeeping or touching the block.
+                if (!guest::Commit(at, size)) return 0;
                 free.erase(it);
                 if (at > start) free[start] = at - start;
                 if (at + size < start + length) free[at + size] = start + length - (at + size);
@@ -73,6 +76,9 @@ namespace
             const uint32_t from = top.load(std::memory_order_relaxed);
             const uint32_t at = (from + align - 1) & ~(align - 1);
             if (uint64_t(at) + size > end) return 0;
+            // Back the allocation before publishing it to callers. This maps
+            // only the bank chunks/pages actually requested by the title.
+            if (!guest::Commit(at, size)) return 0;
             if (at > from) free[from] = at - from;
             top.store(at + size, std::memory_order_release);
             return Took(at, size);
