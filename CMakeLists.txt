@@ -285,8 +285,16 @@ if(PES17_SWITCH)
         # Repeat the static dependency chain so cross-archive references are
         # resolved without relying on linker-group support in the toolchain.
         target_link_libraries(pes17 PRIVATE
-            "${PES17_SWITCH_VULKAN_SDK}/lib/libvulkan.a" expat zstd z nx
-            "${PES17_SWITCH_VULKAN_SDK}/lib/libvulkan.a" expat zstd z nx
+            "${PES17_SWITCH_VULKAN_SDK}/lib/libvulkan.a"
+            "${DEVKITPRO}/portlibs/switch/lib/libexpat.a"
+            "${PES17_SWITCH_VULKAN_SDK}/lib/libzstd.a"
+            "${DEVKITPRO}/portlibs/switch/lib/libz.a"
+            "${DEVKITPRO}/libnx/lib/libnx.a"
+            "${PES17_SWITCH_VULKAN_SDK}/lib/libvulkan.a"
+            "${DEVKITPRO}/portlibs/switch/lib/libexpat.a"
+            "${PES17_SWITCH_VULKAN_SDK}/lib/libzstd.a"
+            "${DEVKITPRO}/portlibs/switch/lib/libz.a"
+            "${DEVKITPRO}/libnx/lib/libnx.a"
             stdc++ m)
         target_link_options(pes17 PRIVATE -pthread -Wl,-z,notext -Wl,-u,vkGetInstanceProcAddr)
         message(STATUS "Switch Vulkan: BO2 Mesa Horizon SDK (${PES17_SWITCH_VULKAN_SDK})")
