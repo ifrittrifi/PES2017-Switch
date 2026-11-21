@@ -2,6 +2,11 @@ name: Full PES 2017 Nintendo Switch NRO
 
 # Manual workflow: build and package the complete PES 2017 Nintendo Switch NRO.
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/build-full-nro.trigger
   workflow_dispatch:
 
 permissions:
