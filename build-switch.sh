@@ -36,6 +36,11 @@ compgen -G 'ppc/ppc_recomp.*.cpp' >/dev/null || fail "generated PPC translation 
 BUILD_DIR="${BUILD_DIR:-$ROOT/build-switch}"
 BUILD_TYPE="${BUILD_TYPE:-Release}"
 JOBS="${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
+BUILD_TARGET="${BUILD_SWITCH_TARGET:-pes17}"
+case "$BUILD_TARGET" in
+  ppc_recomp|pes17) ;;
+  *) fail "unsupported BUILD_SWITCH_TARGET=$BUILD_TARGET (use ppc_recomp or pes17)" ;;
+esac
 
 cmake -S "$ROOT" -B "$BUILD_DIR" \
   -DCMAKE_TOOLCHAIN_FILE="$ROOT/cmake/switch-toolchain.cmake" \
@@ -45,8 +50,12 @@ cmake -S "$ROOT" -B "$BUILD_DIR" \
   -DPES17_USE_SDL=OFF \
   -DPES17_SWITCH_VULKAN_SDK="$PES17_SWITCH_VULKAN_SDK"
 
-cmake --build "$BUILD_DIR" --target pes17 --parallel "$JOBS" --verbose
-test -s "$BUILD_DIR/pes17.nro" || fail "CMake completed but pes17.nro was not produced"
+cmake --build "$BUILD_DIR" --target "$BUILD_TARGET" --parallel "$JOBS" --verbose
 
-printf '\nSwitch NRO ready: %s\n' "$BUILD_DIR/pes17.nro"
-sha256sum "$BUILD_DIR/pes17.nro"
+if [[ "$BUILD_TARGET" == "pes17" ]]; then
+  test -s "$BUILD_DIR/pes17.nro" || fail "CMake completed but pes17.nro was not produced"
+  printf '\nSwitch NRO ready: %s\n' "$BUILD_DIR/pes17.nro"
+  sha256sum "$BUILD_DIR/pes17.nro"
+else
+  printf '\nSwitch build stage ready: %s\n' "$BUILD_TARGET"
+fi
