@@ -75,6 +75,20 @@ with the devkitPro/NXVK toolchain. Transfer the private `ppc/` output and
 matching `pes/default.xex` to that environment, then run
 `bash build-switch.sh`. The script validates these inputs before compiling.
 
+
+## Launch on the console
+
+The full PES runtime requires the Switch **Application** memory budget. Do not
+launch its NRO from the Album/Homebrew Menu applet: Horizon can cap that
+process at a small memory resource limit, and shared-bank allocation will fail
+before the game starts.
+
+Open Homebrew Menu in **title-override mode** by holding **R** while launching
+a game from the HOME Menu, then keep holding R until Homebrew Menu appears.
+Launch PES 2017 from that Homebrew Menu session. The runtime reports the
+Horizon applet type at startup and gives a specific diagnostic if
+`svcCreateSharedMemory` hits `0x00010801` (memory resource limit reached).
+
 ## Current acceptance status
 
 A successful CMake configure or successful diagnostic NRO is not evidence that
