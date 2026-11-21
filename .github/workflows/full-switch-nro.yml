@@ -113,20 +113,41 @@ jobs:
               bash -n ./build-switch.sh
               # Configure the actual game target, but do not compile PPC/runtime.
               BUILD_SWITCH_TARGET=configure bash ./build-switch.sh
-              # Exercise the exact NACP/NRO packager command line on a tiny ELF.
-              printf '%s\n' 'int main(void) { return 0; }' >/tmp/nro-smoke.c
+              # Link the actual pinned NVK archive and its full static dependency
+              # chain in isolation, without compiling any generated PPC files.
+              printf '%s\n' \
+                '#include <vulkan/vulkan.h>' \
+                'extern "C" VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance, const char *);' \
+                'int main() { return vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkCreateInstance") ? 0 : 1; }' \
+                >/tmp/nvk-smoke.cpp
               "$DEVKITA64/bin/aarch64-none-elf-gcc" \
-                -specs="$DEVKITPRO/libnx/switch.specs" \
-                -o /tmp/nro-smoke.elf /tmp/nro-smoke.c
+                -I/mesa-sdk/include -c switch/mesa/elf_stubs.c -o /tmp/elf_stubs.o
+              "$DEVKITA64/bin/aarch64-none-elf-g++" \
+                -I/mesa-sdk/include -c /tmp/nvk-smoke.cpp -o /tmp/nvk-smoke.o
+              "$DEVKITA64/bin/aarch64-none-elf-g++" \
+                -specs="$DEVKITPRO/libnx/switch.specs" -pthread \
+                -Wl,-z,notext -Wl,-u,vkGetInstanceProcAddr \
+                -o /tmp/nvk-smoke.elf /tmp/nvk-smoke.o /tmp/elf_stubs.o \
+                /mesa-sdk/lib/libvulkan.a \
+                "$DEVKITPRO/portlibs/switch/lib/libexpat.a" \
+                /mesa-sdk/lib/libzstd.a \
+                "$DEVKITPRO/portlibs/switch/lib/libz.a" \
+                "$DEVKITPRO/libnx/lib/libnx.a" \
+                /mesa-sdk/lib/libvulkan.a \
+                "$DEVKITPRO/portlibs/switch/lib/libexpat.a" \
+                /mesa-sdk/lib/libzstd.a \
+                "$DEVKITPRO/portlibs/switch/lib/libz.a" \
+                "$DEVKITPRO/libnx/lib/libnx.a" -lstdc++ -lm
+              # Exercise the actual NACP/NRO packager command line on the linked NVK ELF.
               "$DEVKITPRO/tools/bin/nacptool" --create \
                 "PES 2017" "PES2017-Switch" "0.1.0" /tmp/nro-smoke.nacp
               "$DEVKITPRO/tools/bin/elf2nro" \
-                /tmp/nro-smoke.elf /tmp/nro-smoke.nro \
+                /tmp/nvk-smoke.elf /tmp/nvk-smoke.nro \
                 --icon="$DEVKITPRO/libnx/default_icon.jpg" \
                 --nacp=/tmp/nro-smoke.nacp
-              test -s /tmp/nro-smoke.nro
-              file /tmp/nro-smoke.nro
-              echo "CMake configure and NRO packaging smoke test passed."
+              test -s /tmp/nvk-smoke.nro
+              file /tmp/nvk-smoke.nro
+              echo "CMake configure, NVK static link and NRO packaging smoke test passed."
             '
 
       - name: Build full PES runtime and package NRO
