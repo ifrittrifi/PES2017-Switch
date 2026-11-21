@@ -93,7 +93,7 @@ jobs:
           path: build-switch
           key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}-${{ inputs.mode }}
           restore-keys: |
-            switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake', 'CMakeLists.txt') }}-
+            switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-
 
       - name: Preflight CMake configuration and NRO packaging tools
         shell: bash
@@ -113,6 +113,32 @@ jobs:
               bash -n ./build-switch.sh
               # Configure the actual game target, but do not compile PPC/runtime.
               BUILD_SWITCH_TARGET=configure bash ./build-switch.sh
+              # Syntax-check every runtime/platform translation unit without
+              # compiling the 1,413 generated PPC files or linking the game.
+              python3 - <<'PY'
+              import json, pathlib, shlex, subprocess
+              entries = json.loads(pathlib.Path("build-switch/compile_commands.json").read_text())
+              selected = [e for e in entries if "/runtime/" in e["file"] or "/switch/source/" in e["file"] or "/runtime/switch/" in e["file"]]
+              if not selected:
+                  raise SystemExit("No runtime/Switch translation units found in compile_commands.json")
+              for entry in selected:
+                  args = entry.get("arguments") or shlex.split(entry["command"])
+                  cleaned = []
+                  skip = False
+                  for arg in args:
+                      if skip:
+                          skip = False
+                          continue
+                      if arg == "-o":
+                          skip = True
+                          continue
+                      if arg == "-c":
+                          continue
+                      cleaned.append(arg)
+                  cleaned.append("-fsyntax-only")
+                  subprocess.run(cleaned, cwd=entry["directory"], check=True)
+              print(f"Runtime/Switch syntax checks passed: {len(selected)} translation units")
+              PY
               # Link the actual pinned NVK archive and its full static dependency
               # chain in isolation, without compiling any generated PPC files.
               printf '%s\n' \
