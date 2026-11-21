@@ -22,6 +22,7 @@
 #elif defined(__SWITCH__)
 extern "C"
 {
+#  include <switch.h>
 #  include <switch/result.h>
 #  include <switch/kernel/svc.h>
 #  include <switch/kernel/virtmem.h>
