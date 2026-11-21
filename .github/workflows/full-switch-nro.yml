@@ -3,6 +3,15 @@ name: Full PES 2017 Nintendo Switch NRO
 # Keep full builds manual until the staged preflight has passed.
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run preflight only first; select full only after preflight passes"
+        type: choice
+        options:
+          - preflight
+          - full
+        default: preflight
+        required: true
 
 permissions:
   contents: read
@@ -82,11 +91,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build-switch
-          key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake', 'CMakeLists.txt') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}
+          key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake', 'CMakeLists.txt') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}-${{ inputs.mode }}
           restore-keys: |
             switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake', 'CMakeLists.txt') }}-
 
-      - name: Build full PES runtime and package NRO
+      - name: Preflight CMake configuration and NRO packaging tools
         shell: bash
         run: |
           set -euo pipefail
@@ -101,17 +110,47 @@ jobs:
               export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
               export PES17_SWITCH_VULKAN_SDK=/mesa-sdk
               export JOBS=2
-              test -x "$DEVKITA64/bin/aarch64-none-elf-g++"
-              test -x "$DEVKITPRO/tools/bin/nacptool"
-              test -x "$DEVKITPRO/tools/bin/elf2nro"
-              test -s /mesa-sdk/lib/libvulkan.a
-              test -s /mesa-sdk/lib/libzstd.a
               bash -n ./build-switch.sh
-              # Expensive generated PPC code is built as an independent stage.
-              # The cache action preserves these objects if a later stage fails.
+              # Configure the actual game target, but do not compile PPC/runtime.
+              BUILD_SWITCH_TARGET=configure bash ./build-switch.sh
+              # Exercise the exact NACP/NRO packager command line on a tiny ELF.
+              cat >/tmp/nro-smoke.c <<EOF
+              int main(void) { return 0; }
+              EOF
+              "$DEVKITA64/bin/aarch64-none-elf-gcc" \
+                -specs="$DEVKITPRO/libnx/switch.specs" \
+                -o /tmp/nro-smoke.elf /tmp/nro-smoke.c
+              "$DEVKITPRO/tools/bin/nacptool" --create \
+                "PES 2017" "PES2017-Switch" "0.1.0" /tmp/nro-smoke.nacp
+              "$DEVKITPRO/tools/bin/elf2nro" \
+                /tmp/nro-smoke.elf /tmp/nro-smoke.nro \
+                --icon="$DEVKITPRO/libnx/default_icon.jpg" \
+                --nacp=/tmp/nro-smoke.nacp
+              test -s /tmp/nro-smoke.nro
+              file /tmp/nro-smoke.nro
+              echo "CMake configure and NRO packaging smoke test passed."
+            '
+
+      - name: Build full PES runtime and package NRO
+        if: ${{ inputs.mode == 'full' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$BO2_MESA_SDK:/mesa-sdk:ro" \
+            -w /work \
+            devkitpro/devkita64:latest \
+            bash -euc '
+              export DEVKITPRO=/opt/devkitpro
+              export DEVKITA64="$DEVKITPRO/devkitA64"
+              export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+              export PES17_SWITCH_VULKAN_SDK=/mesa-sdk
+              export JOBS=2
+              # Build the expensive PPC archive separately so its object files
+              # are cached even if runtime compilation/linking later fails.
               BUILD_SWITCH_TARGET=ppc_recomp bash ./build-switch.sh
-              # Runtime compilation, final ELF link and NRO packaging happen only
-              # after the PPC archive is already available.
+              # Then compile runtime, link the game ELF and package the real NRO.
               bash ./build-switch.sh
               test -s build-switch/pes17.nro
               file build-switch/pes17.nro
@@ -120,6 +159,7 @@ jobs:
             '
 
       - name: Upload full game NRO
+        if: ${{ inputs.mode == 'full' }}
         uses: actions/upload-artifact@v4
         with:
           name: pes2017-switch-full-nro
