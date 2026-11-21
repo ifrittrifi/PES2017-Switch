@@ -154,7 +154,7 @@ jobs:
                 --icon="$DEVKITPRO/libnx/default_icon.jpg" \
                 --nacp=/tmp/nro-smoke.nacp
               test -s /tmp/nvk-smoke.nro
-              python3 -c 'p="/tmp/nvk-smoke.nro"; f=open(p,"rb"); f.seek(0x10); magic=f.read(4); f.close(); assert magic == b"NRO0", f"Invalid NRO header: {magic!r}"; print(f"Valid NRO smoke test: {p} ({__import__(\"os\").path.getsize(p)} bytes)")'
+              python3 -c 'import os; p="/tmp/nvk-smoke.nro"; f=open(p,"rb"); f.seek(0x10); magic=f.read(4); f.close(); assert magic == b"NRO0", "Invalid NRO header: %r" % (magic,); print("Valid NRO smoke test:", p, os.path.getsize(p), "bytes")'
               echo "CMake configure, NVK static link and NRO packaging smoke test passed."
           CONTAINER_SCRIPT
             )"
@@ -181,7 +181,7 @@ jobs:
               # Then compile runtime, link the game ELF and package the real NRO.
               bash ./build-switch.sh
               test -s build-switch/pes17.nro
-              python3 -c 'p="build-switch/pes17.nro"; f=open(p,"rb"); f.seek(0x10); magic=f.read(4); f.close(); assert magic == b"NRO0", f"Invalid NRO header: {magic!r}"; print(f"Valid game NRO: {p} ({__import__(\"os\").path.getsize(p)} bytes)")'
+              python3 -c 'import os; p="build-switch/pes17.nro"; f=open(p,"rb"); f.seek(0x10); magic=f.read(4); f.close(); assert magic == b"NRO0", "Invalid NRO header: %r" % (magic,); print("Valid game NRO:", p, os.path.getsize(p), "bytes")'
               sha256sum build-switch/pes17.nro
               ls -lh build-switch/pes17.nro
             '
