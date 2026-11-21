@@ -3,6 +3,9 @@ name: Full PES 2017 Nintendo Switch NRO
 # Manual workflow: build and package the complete PES 2017 Nintendo Switch NRO.
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/dispatch-full-nro.trigger'
 
 permissions:
   contents: read
@@ -87,7 +90,7 @@ jobs:
             switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-
 
       - name: Build full PES runtime and package NRO
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -114,7 +117,7 @@ jobs:
             '
 
       - name: Upload full game NRO
-        if: ${{ success() && github.event_name == 'workflow_dispatch' }}
+        if: ${{ success() && (github.event_name == 'workflow_dispatch' || github.event_name == 'push') }}
         uses: actions/upload-artifact@v4
         with:
           name: pes2017-switch-full-nro
