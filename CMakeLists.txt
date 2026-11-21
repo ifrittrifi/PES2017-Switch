@@ -108,6 +108,7 @@ if(PES17_SWITCH)
     list(APPEND RUNTIME_SOURCES
         "${CMAKE_SOURCE_DIR}/runtime/switch/platform.cpp"
         "${CMAKE_SOURCE_DIR}/runtime/switch/audio.cpp"
+        "${CMAKE_SOURCE_DIR}/runtime/switch/posix_compat.cpp"
         "${CMAKE_SOURCE_DIR}/switch/source/input.cpp")
 endif()
 
