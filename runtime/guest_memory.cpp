@@ -1,5 +1,7 @@
 #include "guest_memory.h"
 #include <initializer_list>
+#include <array>
+#include <mutex>
 #include "log.h"
 #include <ppc_config.h>
 
@@ -41,7 +43,18 @@ namespace
     constexpr uint64_t kSpace = 0x100000000ull;   // full 32-bit guest space
 #ifdef __SWITCH__
     VirtmemReservation* g_reservation = nullptr;
-    Handle g_physicalBank = INVALID_HANDLE;
+    // Horizon's shared-memory SVC cannot reliably create one 512 MiB object
+    // under the NRO's application memory budget. Keep the console's 512 MiB
+    // address-space layout, but back it lazily with small shared objects.
+    constexpr size_t kSwitchBankChunkSize = 4u * 1024u * 1024u;
+    constexpr size_t kSwitchBankChunkCount =
+        size_t(guest::kPhysicalEnd - guest::kPhysicalBase) / kSwitchBankChunkSize;
+    std::array<Handle, kSwitchBankChunkCount> g_switchBankChunks = [] {
+        std::array<Handle, kSwitchBankChunkCount> handles{};
+        handles.fill(INVALID_HANDLE);
+        return handles;
+    }();
+    std::mutex g_switchBankMutex;
 
     constexpr bool SwitchCommitPageRange(uint32_t address, uint32_t size,
                                          uint64_t& begin, uint64_t& end)
@@ -92,7 +105,15 @@ bool guest::Commit(uint32_t address, uint32_t size)
     {
         const uint64_t windowBegin = window;
         const uint64_t windowEnd = windowBegin + bankSize;
-        if (begin >= windowBegin && end <= windowEnd) return true;
+        if (begin >= windowBegin && end <= windowEnd)
+        {
+            const uint64_t bankOffset = begin - windowBegin;
+            const size_t firstChunk = size_t(bankOffset / kSwitchBankChunkSize);
+            const size_t lastChunk = size_t((end - windowBegin - 1) / kSwitchBankChunkSize);
+            for (size_t chunk = firstChunk; chunk <= lastChunk; ++chunk)
+                if (!EnsureSwitchBankChunk(chunk)) return false;
+            return true;
+        }
         if (begin < windowEnd && end > windowBegin)
         {
             LOGE("guest: Switch commit %08llX..%08llX overlaps physical bank window %08X",
@@ -226,15 +247,20 @@ namespace
         return true;
     }
 
-    bool MapPhysicalAperture()
+    bool EnsureSwitchBankChunk(size_t index)
     {
-        const size_t size = size_t(guest::kPhysicalEnd - guest::kPhysicalBase);
-        Result rc = svcCreateSharedMemory(&g_physicalBank, size, Perm_Rw, Perm_DontCare);
+        if (index >= kSwitchBankChunkCount) return false;
+        std::lock_guard lock(g_switchBankMutex);
+        if (g_switchBankChunks[index] != INVALID_HANDLE) return true;
+
+        const size_t offset = index * kSwitchBankChunkSize;
+        const size_t size = kSwitchBankChunkSize;
+        Handle bank = INVALID_HANDLE;
+        Result rc = svcCreateSharedMemory(&bank, size, Perm_Rw, Perm_DontCare);
         if (R_FAILED(rc))
         {
-            LOGE("guest: svcCreateSharedMemory(%zu) failed: 0x%08X",
-                 size, unsigned(rc));
-            g_physicalBank = INVALID_HANDLE;
+            LOGE("guest: svcCreateSharedMemory bank chunk %zu (%zu bytes) failed: 0x%08X",
+                 index, size, unsigned(rc));
             return false;
         }
 
@@ -244,23 +270,31 @@ namespace
         size_t mapped = 0;
         for (uint32_t window : windows)
         {
-            rc = svcMapSharedMemory(g_physicalBank, g_base + window, size, Perm_Rw);
+            rc = svcMapSharedMemory(bank, g_base + window + offset, size, Perm_Rw);
             if (R_FAILED(rc))
             {
-                LOGE("guest: mapping 512 MiB bank at %08X failed: 0x%08X",
-                     window, unsigned(rc));
+                LOGE("guest: mapping bank chunk %zu at %08X failed: 0x%08X",
+                     index, window + uint32_t(offset), unsigned(rc));
                 while (mapped)
                 {
                     --mapped;
-                    svcUnmapSharedMemory(g_physicalBank, g_base + windows[mapped], size);
+                    svcUnmapSharedMemory(bank, g_base + windows[mapped] + offset, size);
                 }
-                svcCloseHandle(g_physicalBank);
-                g_physicalBank = INVALID_HANDLE;
+                svcCloseHandle(bank);
                 return false;
             }
             ++mapped;
         }
-        LOGI("guest: Switch shared 512 MiB bank mapped at cached/physical/aperture windows");
+        g_switchBankChunks[index] = bank;
+        return true;
+    }
+
+    bool MapPhysicalAperture()
+    {
+        // ReserveSpace owns the complete 4 GiB address range. The physical
+        // bank is mapped only when a guest allocation commits a page in it.
+        LOGI("guest: Switch 512 MiB bank will be mapped lazily in %zu MiB chunks",
+             kSwitchBankChunkSize / (1024u * 1024u));
         return true;
     }
 #else
@@ -351,10 +385,15 @@ uint8_t* guest::Initialise()
     static_assert(kFuncTableBase + PPC_CODE_SIZE * 2 <= kFarBase,
                   "the function lookup table must end below the far heap");
 
-    // The physical bank is a mapping, committed whole already.
+    // The Switch bank is backed lazily by Heap::Alloc; committing the entire
+    // 415+ MiB heap here would defeat that and exceed applet-mode budgets.
+    // Desktop platforms retain their existing eager reservation semantics.
     if (!Commit(uint32_t(PPC_IMAGE_BASE), uint32_t(PPC_IMAGE_SIZE)) ||
-        !Commit(funcTableBase, funcTableSize) ||
-        !Commit(kHeapBase, kHeapEnd - kHeapBase))
+        !Commit(funcTableBase, funcTableSize)
+#if !defined(__SWITCH__)
+        || !Commit(kHeapBase, kHeapEnd - kHeapBase)
+#endif
+       )
     {
         LOGE("failed to commit guest regions");
         return nullptr;
