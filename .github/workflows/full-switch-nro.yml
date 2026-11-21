@@ -114,9 +114,7 @@ jobs:
               # Configure the actual game target, but do not compile PPC/runtime.
               BUILD_SWITCH_TARGET=configure bash ./build-switch.sh
               # Exercise the exact NACP/NRO packager command line on a tiny ELF.
-              cat >/tmp/nro-smoke.c <<EOF
-              int main(void) { return 0; }
-              EOF
+              printf '%s\n' 'int main(void) { return 0; }' >/tmp/nro-smoke.c
               "$DEVKITA64/bin/aarch64-none-elf-gcc" \
                 -specs="$DEVKITPRO/libnx/switch.specs" \
                 -o /tmp/nro-smoke.elf /tmp/nro-smoke.c
