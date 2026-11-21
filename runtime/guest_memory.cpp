@@ -22,7 +22,6 @@
 #elif defined(__SWITCH__)
 extern "C"
 {
-#  include <switch/applet.h>
 #  include <switch/result.h>
 #  include <switch/kernel/svc.h>
 #  include <switch/kernel/virtmem.h>
@@ -303,9 +302,8 @@ namespace
                  index, size, unsigned(rc));
             if (unsigned(rc) == 0x00010801u)
             {
-                LOGE("guest: Horizon memory resource limit reached; applet type=%u",
-                     unsigned(appletGetAppletType()));
-                LOGE("guest: launch PES17 as a full Application with title override, not from Album/applet mode");
+                LOGE("guest: Horizon shared-memory resource limit reached (0x00010801)");
+                LOGE("guest: launch PES17 as a full Application using HOME Menu title override");
             }
             return false;
         }
@@ -404,8 +402,6 @@ uint8_t* guest::Initialise()
     // Horizon's guest mappings and svcMapPhysicalMemory are page-granular at
     // 4 KiB. Do not route this native path through the POSIX sysconf API.
     LOGI("host pages are %u bytes", 0x1000u);
-    LOGI("guest: Horizon applet type=%u (Application launch is required for the full game memory budget)",
-         unsigned(appletGetAppletType()));
 #elif !defined(_WIN32)
     // Worth a line: an Android 15 device has 16 KB pages, everything else
     // has 4 KB, and the difference decides whether memory protection can
