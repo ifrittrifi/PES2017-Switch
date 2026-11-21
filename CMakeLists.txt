@@ -279,12 +279,14 @@ if(PES17_SWITCH)
         target_sources(pes17 PRIVATE "${CMAKE_SOURCE_DIR}/switch/mesa/elf_stubs.c")
         target_include_directories(pes17 PRIVATE "${PES17_SWITCH_VULKAN_SDK}/include")
         target_link_directories(pes17 PRIVATE "${PES17_SWITCH_VULKAN_SDK}/lib")
-        # Match BO2's rexglue_switch.cmake archive order. Repeating the static
-        # archives lets the linker resolve cross-archive references without
-        # relying on a platform-specific linker-group feature.
+        # Use the SDK archive by absolute path. devkitPro may also install
+        # an older generic libvulkan.a in portlibs/switch, and -lvulkan can
+        # silently select that archive because its -L path precedes this SDK.
+        # Repeat the static dependency chain so cross-archive references are
+        # resolved without relying on linker-group support in the toolchain.
         target_link_libraries(pes17 PRIVATE
-            vulkan expat zstd z nx
-            vulkan expat zstd z nx
+            "${PES17_SWITCH_VULKAN_SDK}/lib/libvulkan.a" expat zstd z nx
+            "${PES17_SWITCH_VULKAN_SDK}/lib/libvulkan.a" expat zstd z nx
             stdc++ m)
         target_link_options(pes17 PRIVATE -pthread -Wl,-z,notext -Wl,-u,vkGetInstanceProcAddr)
         message(STATUS "Switch Vulkan: BO2 Mesa Horizon SDK (${PES17_SWITCH_VULKAN_SDK})")
