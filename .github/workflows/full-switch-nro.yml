@@ -1,0 +1,214 @@
+name: Full PES 2017 Nintendo Switch NRO
+
+# Keep full builds manual until the staged preflight has passed.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run preflight only first; select full only after preflight passes"
+        type: choice
+        options:
+          - preflight
+          - full
+        default: preflight
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-switch-nro-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build full game with devkitA64 and BO2 Mesa NVK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Check out private project and generated PPC
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Validate private game and generated PPC inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s pes/default.xex
+          test -s ppc/XEX_TARGET
+          test -s ppc/ppc_func_mapping.cpp
+          test -s ppc/stubs_generated.cpp
+          count="$(find ppc -maxdepth 1 -type f -name 'ppc_recomp.*.cpp' | wc -l)"
+          test "$count" -gt 0
+          echo "Generated PPC translation units: $count"
+          echo "Checking expected XEX identity..."
+          echo "b914ec9a1abb3a9b42a64255b6aa8ff27312da126f7c18f8c880106b832779e6  pes/default.xex" | sha256sum --check
+          grep -E '^title_id=0x4A3007D1$' ppc/XEX_TARGET
+          grep -E '^version=0x00000012$' ppc/XEX_TARGET
+          grep -E '^sha256=b914ec9a1abb3a9b42a64255b6aa8ff27312da126f7c18f8c880106b832779e6$' ppc/XEX_TARGET
+
+      - name: Download and verify pinned BO2 Mesa Horizon Vulkan SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/AlvaroEPena/bo2-360-nx/releases/download/Release-1.1.0/bo2-360-nx-release-1.1.0-switch%2Bwindows-build-kit.zip"
+          archive="$RUNNER_TEMP/bo2-switch-build-kit.zip"
+          curl --fail --location --retry 3 "$url" --output "$archive"
+          echo "5c973a38b0921650ebfddf47fd9064f46f5aefa60d019a84371cfb0af328a26f  $archive" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/bo2-kit"
+          unzip -q "$archive" -d "$RUNNER_TEMP/bo2-kit"
+          manifest_path="$(find "$RUNNER_TEMP/bo2-kit" -type f -path '*/runtime/manifest.json' -print -quit)"
+          test -n "$manifest_path"
+          runtime_dir="$(dirname "$manifest_path")"
+          python3 - "$manifest_path" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              manifest = json.load(f)
+          assert manifest["commit"] == "897abae89ca1836abe119581883b435d80edc6fe", manifest.get("commit")
+          assert manifest["mesa"]["base"] == "danfromtico/mesa-switch 1a8c1a66d6f", manifest.get("mesa")
+          print("Verified BO2 Horizon runtime:", manifest["commit"])
+          print("Verified Mesa base:", manifest["mesa"]["base"])
+          PY
+          sdk="$runtime_dir/switch/portlibs"
+          test -s "$sdk/lib/libvulkan.a"
+          test -s "$sdk/lib/libzstd.a"
+          test -s "$sdk/include/vulkan/vulkan.h"
+          echo "BO2_MESA_SDK=$sdk" >> "$GITHUB_ENV"
+          echo "Pinned BO2 Mesa Horizon SDK contains libvulkan.a and Vulkan headers."
+
+      - name: Pin devkitPro build image for this run
+        id: devkitpro-image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull devkitpro/devkita64:latest
+          image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkita64:latest)"
+          echo "image_id=$image_id" >> "$GITHUB_OUTPUT"
+
+      - name: Restore staged CMake and PPC object cache
+        uses: actions/cache@v4
+        with:
+          path: build-switch
+          key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}-${{ inputs.mode }}
+          restore-keys: |
+            switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-
+
+      - name: Preflight CMake configuration and NRO packaging tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$BO2_MESA_SDK:/mesa-sdk:ro" \
+            -w /work \
+            devkitpro/devkita64:latest \
+            bash -euc '
+              export DEVKITPRO=/opt/devkitpro
+              export DEVKITA64="$DEVKITPRO/devkitA64"
+              export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+              export PES17_SWITCH_VULKAN_SDK=/mesa-sdk
+              export JOBS=2
+              bash -n ./build-switch.sh
+              # Configure the actual game target, but do not compile PPC/runtime.
+              BUILD_SWITCH_TARGET=configure bash ./build-switch.sh
+              # Syntax-check every runtime/platform translation unit without
+              # compiling the 1,413 generated PPC files or linking the game.
+              python3 - <<'PY'
+              import json, pathlib, shlex, subprocess
+              entries = json.loads(pathlib.Path("build-switch/compile_commands.json").read_text())
+              selected = [e for e in entries if "/runtime/" in e["file"] or "/switch/source/" in e["file"] or "/runtime/switch/" in e["file"]]
+              if not selected:
+                  raise SystemExit("No runtime/Switch translation units found in compile_commands.json")
+              for entry in selected:
+                  args = entry.get("arguments") or shlex.split(entry["command"])
+                  cleaned = []
+                  skip = False
+                  for arg in args:
+                      if skip:
+                          skip = False
+                          continue
+                      if arg == "-o":
+                          skip = True
+                          continue
+                      if arg == "-c":
+                          continue
+                      cleaned.append(arg)
+                  cleaned.append("-fsyntax-only")
+                  subprocess.run(cleaned, cwd=entry["directory"], check=True)
+              print(f"Runtime/Switch syntax checks passed: {len(selected)} translation units")
+              PY
+              # Link the actual pinned NVK archive and its full static dependency
+              # chain in isolation, without compiling any generated PPC files.
+              printf '%s\n' \
+                '#include <vulkan/vulkan.h>' \
+                '#include <pthread.h>' \
+                'static void *worker(void *p) { return p; }' \
+                'int main() { pthread_t t; if (pthread_create(&t, 0, worker, 0)) return 1; if (pthread_join(t, 0)) return 2; return vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkCreateInstance") ? 0 : 3; }' \
+                >/tmp/nvk-smoke.cpp
+              "$DEVKITA64/bin/aarch64-none-elf-gcc" \
+                -I/mesa-sdk/include -c switch/mesa/elf_stubs.c -o /tmp/elf_stubs.o
+              "$DEVKITA64/bin/aarch64-none-elf-g++" \
+                -I/mesa-sdk/include -c /tmp/nvk-smoke.cpp -o /tmp/nvk-smoke.o
+              "$DEVKITA64/bin/aarch64-none-elf-g++" \
+                -specs="$DEVKITPRO/libnx/switch.specs" -pthread \
+                -Wl,-z,notext -Wl,-u,vkGetInstanceProcAddr \
+                -o /tmp/nvk-smoke.elf /tmp/nvk-smoke.o /tmp/elf_stubs.o \
+                /mesa-sdk/lib/libvulkan.a \
+                "$DEVKITPRO/portlibs/switch/lib/libexpat.a" \
+                /mesa-sdk/lib/libzstd.a \
+                "$DEVKITPRO/portlibs/switch/lib/libz.a" \
+                "$DEVKITPRO/libnx/lib/libnx.a" \
+                /mesa-sdk/lib/libvulkan.a \
+                "$DEVKITPRO/portlibs/switch/lib/libexpat.a" \
+                /mesa-sdk/lib/libzstd.a \
+                "$DEVKITPRO/portlibs/switch/lib/libz.a" \
+                "$DEVKITPRO/libnx/lib/libnx.a" -lstdc++ -lm
+              # Exercise the actual NACP/NRO packager command line on the linked NVK ELF.
+              "$DEVKITPRO/tools/bin/nacptool" --create \
+                "PES 2017" "PES2017-Switch" "0.1.0" /tmp/nro-smoke.nacp
+              "$DEVKITPRO/tools/bin/elf2nro" \
+                /tmp/nvk-smoke.elf /tmp/nvk-smoke.nro \
+                --icon="$DEVKITPRO/libnx/default_icon.jpg" \
+                --nacp=/tmp/nro-smoke.nacp
+              test -s /tmp/nvk-smoke.nro
+              file /tmp/nvk-smoke.nro
+              echo "CMake configure, NVK static link and NRO packaging smoke test passed."
+            '
+
+      - name: Build full PES runtime and package NRO
+        if: ${{ inputs.mode == 'full' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$BO2_MESA_SDK:/mesa-sdk:ro" \
+            -w /work \
+            devkitpro/devkita64:latest \
+            bash -euc '
+              export DEVKITPRO=/opt/devkitpro
+              export DEVKITA64="$DEVKITPRO/devkitA64"
+              export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
+              export PES17_SWITCH_VULKAN_SDK=/mesa-sdk
+              export JOBS=2
+              # Build the expensive PPC archive separately so its object files
+              # are cached even if runtime compilation/linking later fails.
+              BUILD_SWITCH_TARGET=ppc_recomp bash ./build-switch.sh
+              # Then compile runtime, link the game ELF and package the real NRO.
+              bash ./build-switch.sh
+              test -s build-switch/pes17.nro
+              file build-switch/pes17.nro
+              sha256sum build-switch/pes17.nro
+              ls -lh build-switch/pes17.nro
+            '
+
+      - name: Upload full game NRO
+        if: ${{ inputs.mode == 'full' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pes2017-switch-full-nro
+          path: build-switch/pes17.nro
+          if-no-files-found: error
+          retention-days: 7
