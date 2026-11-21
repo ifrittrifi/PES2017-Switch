@@ -1,20 +1,8 @@
 name: Full PES 2017 Nintendo Switch NRO
 
+# Keep full builds manual until the staged preflight has passed.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - work/switch-libnx-platform
-    paths:
-      - "pes/**"
-      - "ppc/**"
-      - "runtime/**"
-      - "switch/mesa/**"
-      - "third_party/**"
-      - "cmake/**"
-      - "CMakeLists.txt"
-      - "build-switch.sh"
-      - ".github/workflows/full-switch-nro.yml"
 
 permissions:
   contents: read
@@ -81,11 +69,27 @@ jobs:
           echo "BO2_MESA_SDK=$sdk" >> "$GITHUB_ENV"
           echo "Pinned BO2 Mesa Horizon SDK contains libvulkan.a and Vulkan headers."
 
-      - name: Build full PES runtime and package NRO
+      - name: Pin devkitPro build image for this run
+        id: devkitpro-image
         shell: bash
         run: |
           set -euo pipefail
           docker pull devkitpro/devkita64:latest
+          image_id="$(docker image inspect --format '{{.Id}}' devkitpro/devkita64:latest)"
+          echo "image_id=$image_id" >> "$GITHUB_OUTPUT"
+
+      - name: Restore staged CMake and PPC object cache
+        uses: actions/cache@v4
+        with:
+          path: build-switch
+          key: switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake', 'CMakeLists.txt') }}-${{ hashFiles('runtime/**/*.cpp', 'runtime/**/*.h', 'switch/**/*.c', 'switch/**/*.cpp', 'third_party/ffmpeg-xenia/CMakeLists.txt') }}
+          restore-keys: |
+            switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake', 'CMakeLists.txt') }}-
+
+      - name: Build full PES runtime and package NRO
+        shell: bash
+        run: |
+          set -euo pipefail
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/work" \
             -v "$BO2_MESA_SDK:/mesa-sdk:ro" \
@@ -103,6 +107,11 @@ jobs:
               test -s /mesa-sdk/lib/libvulkan.a
               test -s /mesa-sdk/lib/libzstd.a
               bash -n ./build-switch.sh
+              # Expensive generated PPC code is built as an independent stage.
+              # The cache action preserves these objects if a later stage fails.
+              BUILD_SWITCH_TARGET=ppc_recomp bash ./build-switch.sh
+              # Runtime compilation, final ELF link and NRO packaging happen only
+              # after the PPC archive is already available.
               bash ./build-switch.sh
               test -s build-switch/pes17.nro
               file build-switch/pes17.nro
