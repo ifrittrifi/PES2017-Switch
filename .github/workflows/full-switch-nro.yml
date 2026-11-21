@@ -119,30 +119,7 @@ jobs:
               BUILD_SWITCH_TARGET=configure bash ./build-switch.sh
               # Syntax-check every runtime/platform translation unit without
               # compiling the 1,413 generated PPC files or linking the game.
-          python3 - <<PYCODE
-          import json, pathlib, shlex, subprocess
-          entries = json.loads(pathlib.Path("build-switch/compile_commands.json").read_text())
-          selected = [e for e in entries if "runtime" in pathlib.PurePosixPath(e["file"]).parts or "switch" in pathlib.PurePosixPath(e["file"]).parts]
-          if not selected:
-              raise SystemExit("No runtime/Switch translation units found in compile_commands.json")
-          for entry in selected:
-              args = entry.get("arguments") or shlex.split(entry["command"])
-              cleaned = []
-              skip = False
-              for arg in args:
-                  if skip:
-                      skip = False
-                      continue
-                  if arg == "-o":
-                      skip = True
-                      continue
-                  if arg == "-c":
-                      continue
-                  cleaned.append(arg)
-              cleaned.append("-fsyntax-only")
-              subprocess.run(cleaned, cwd=entry["directory"], check=True)
-          print(f"Runtime/Switch syntax checks passed: {len(selected)} translation units")
-          PY
+              python3 scripts/preflight_syntax.py
               # Link the actual pinned NVK archive and its full static dependency
               # chain in isolation, without compiling any generated PPC files.
               printf '%s\n' \
