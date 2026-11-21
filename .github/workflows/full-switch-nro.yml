@@ -209,7 +209,7 @@ jobs:
             '
 
       - name: Upload full game NRO
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full' }}
+        if: ${{ success() && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full')) }}
         uses: actions/upload-artifact@v4
         with:
           name: pes2017-switch-full-nro
