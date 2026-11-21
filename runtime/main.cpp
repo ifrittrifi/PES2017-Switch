@@ -138,7 +138,6 @@ namespace
             LOGW("run deadline: could not start arrival watchdog worker");
         }
     }
-}
 
 void crash::RequestExit(const char* why)
 {
