@@ -93,7 +93,7 @@ namespace
     constexpr bool kLastPageRangeValid = [] {
         uint64_t begin = 0, end = 0;
         return SwitchCommitPageRange(0xFFFFFFF0u, 0x10u, begin, end) &&
-               begin == 0xFFFFF000ull && end == kSpace;
+               begin == 0xFFFF0000ull && end == kSpace;
     }();
     constexpr bool kPastGuestEndRejected = [] {
         uint64_t begin = 0, end = 0;
@@ -272,7 +272,7 @@ namespace
     {
         // Reserve one contiguous 4 GiB guest address range in Horizon's ASLR
         // region. virtmemAddReservation keeps libnx's own random mappings out
-        // of the range; the individual guest pages are mapped on Commit().
+        // of the range; ordinary virtual memory is mapped in 64 KiB granules on Commit().
         virtmemLock();
         void* address = virtmemFindAslr(size_t(kSpace), 0x1000);
         if (address) g_reservation = virtmemAddReservation(address, size_t(kSpace));
