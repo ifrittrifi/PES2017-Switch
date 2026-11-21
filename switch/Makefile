@@ -100,7 +100,7 @@ check-runtime-guest-memory:
 .PHONY: check-runtime-input
 check-runtime-input:
 	@if test -f "$(TOPDIR)/../ppc/ppc_recomp_shared.h"; then \
-	  $(CXX) -std=gnu++20 -D__SWITCH__ -I$(TOPDIR)/../runtime -I$(TOPDIR)/../ppc -I$(CURDIR)/include -I$(LIBNX)/include -include cstdint -fsyntax-only $(TOPDIR)/../runtime/kernel/input.cpp; \
+	  $(CXX) -std=gnu++20 -D__SWITCH__ -I$(TOPDIR)/../runtime -I$(TOPDIR)/../ppc -I$(TOPDIR)/../third_party/XenonRecomp/thirdparty/simde -I$(TOPDIR)/../third_party/XenonRecomp/thirdparty/simde/simde -I$(CURDIR)/include -I$(LIBNX)/include -include cstdint -fsyntax-only $(TOPDIR)/../runtime/kernel/input.cpp; \
 	else \
 	  echo "SKIP: runtime XInput syntax check needs generated ppc/ppc_recomp_shared.h (game build output is not committed)"; \
 	fi
