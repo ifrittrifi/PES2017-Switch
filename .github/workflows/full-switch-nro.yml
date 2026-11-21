@@ -2,6 +2,9 @@ name: Full PES 2017 Nintendo Switch NRO
 
 # Keep full builds manual until the staged preflight has passed.
 on:
+  push:
+    branches:
+      - work/switch-libnx-platform
   workflow_dispatch:
     inputs:
       mode:
@@ -118,7 +121,7 @@ jobs:
           python3 - <<PYCODE
           import json, pathlib, shlex, subprocess
           entries = json.loads(pathlib.Path("build-switch/compile_commands.json").read_text())
-          selected = [e for e in entries if "/runtime/" in e["file"] or "/switch/source/" in e["file"] or "/runtime/switch/" in e["file"]]
+          selected = [e for e in entries if "runtime" in pathlib.PurePosixPath(e["file"]).parts or "switch" in pathlib.PurePosixPath(e["file"]).parts]
           if not selected:
               raise SystemExit("No runtime/Switch translation units found in compile_commands.json")
           for entry in selected:
