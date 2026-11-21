@@ -108,7 +108,7 @@ jobs:
               # Then compile runtime, link the game ELF and package the real NRO.
               bash ./build-switch.sh
               test -s build-switch/pes17.nro
-              python3 -c 'import os; p="build-switch/pes17.nro"; f=open(p,"rb"); f.seek(0x10); magic=f.read(4); f.close(); assert magic == b"NRO0", "Invalid NRO header: %r" % (magic,); print("Valid game NRO:", p, os.path.getsize(p), "bytes")'
+              python3 -c "import os; p='build-switch/pes17.nro'; f=open(p,'rb'); f.seek(0x10); magic=f.read(4); f.close(); assert magic == b'NRO0', 'Invalid NRO header: %r' % (magic,); print('Valid game NRO:', p, os.path.getsize(p), 'bytes')"
               sha256sum build-switch/pes17.nro
               ls -lh build-switch/pes17.nro
             '
