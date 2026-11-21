@@ -55,6 +55,23 @@ namespace
         return handles;
     }();
     std::mutex g_switchBankMutex;
+    // svcMapPhysicalMemory is not an idempotent commit operation. Track its
+    // 4 KiB pages so adjacent/freed guest allocations never remap a live page.
+    constexpr size_t kSwitchPageCount = size_t(kSpace / 0x1000u);
+    std::array<uint64_t, kSwitchPageCount / 64u> g_switchCommittedPages{};
+    std::mutex g_switchCommitMutex;
+
+    bool SwitchPageCommitted(uint64_t page)
+    {
+        return (g_switchCommittedPages[size_t(page / 64u)] &
+                (uint64_t(1) << (page % 64u))) != 0;
+    }
+
+    void MarkSwitchPagesCommitted(uint64_t first, uint64_t last)
+    {
+        for (uint64_t page = first; page < last; ++page)
+            g_switchCommittedPages[size_t(page / 64u)] |= uint64_t(1) << (page % 64u);
+    }
 
     bool EnsureSwitchBankChunk(size_t index);
 
@@ -123,12 +140,30 @@ bool guest::Commit(uint32_t address, uint32_t size)
             return false;
         }
     }
-    const Result rc = svcMapPhysicalMemory(g_base + begin, end - begin);
-    if (R_FAILED(rc))
+    const uint64_t firstPage = begin / 0x1000u;
+    const uint64_t lastPage = end / 0x1000u;
+    std::lock_guard commitLock(g_switchCommitMutex);
+    uint64_t page = firstPage;
+    while (page < lastPage)
     {
-        LOGE("guest: svcMapPhysicalMemory(%08llX, %llu) failed: 0x%08X",
-             (unsigned long long)begin, (unsigned long long)(end - begin), unsigned(rc));
-        return false;
+        if (SwitchPageCommitted(page))
+        {
+            ++page;
+            continue;
+        }
+        const uint64_t runBegin = page;
+        while (page < lastPage && !SwitchPageCommitted(page)) ++page;
+        const uint64_t runSize = (page - runBegin) * 0x1000u;
+        const Result rc = svcMapPhysicalMemory(
+            g_base + runBegin * 0x1000u, runSize);
+        if (R_FAILED(rc))
+        {
+            LOGE("guest: svcMapPhysicalMemory(%08llX, %llu) failed: 0x%08X",
+                 (unsigned long long)(runBegin * 0x1000u),
+                 (unsigned long long)runSize, unsigned(rc));
+            return false;
+        }
+        MarkSwitchPagesCommitted(runBegin, page);
     }
     return true;
 #else
