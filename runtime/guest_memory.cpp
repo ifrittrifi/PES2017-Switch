@@ -55,22 +55,24 @@ namespace
         return handles;
     }();
     std::mutex g_switchBankMutex;
-    // svcMapPhysicalMemory is not an idempotent commit operation. Track its
-    // 4 KiB pages so adjacent/freed guest allocations never remap a live page.
-    constexpr size_t kSwitchPageCount = size_t(kSpace / 0x1000u);
-    std::array<uint64_t, kSwitchPageCount / 64u> g_switchCommittedPages{};
+    // Horizon limits process memory-block descriptors. Match the reference
+    // Switch ports: 64 KiB commits for ordinary virtual memory, while the
+    // shared physical bank is backed separately in 4 MiB chunks.
+    constexpr size_t kSwitchVirtualGranule = 0x10000u;
+    constexpr size_t kSwitchGranuleCount = size_t(kSpace / kSwitchVirtualGranule);
+    std::array<uint64_t, kSwitchGranuleCount / 64u> g_switchCommittedGranules{};
     std::mutex g_switchCommitMutex;
 
-    bool SwitchPageCommitted(uint64_t page)
+    bool SwitchGranuleCommitted(uint64_t granule)
     {
-        return (g_switchCommittedPages[size_t(page / 64u)] &
-                (uint64_t(1) << (page % 64u))) != 0;
+        return (g_switchCommittedGranules[size_t(granule / 64u)] &
+                (uint64_t(1) << (granule % 64u))) != 0;
     }
 
-    void MarkSwitchPagesCommitted(uint64_t first, uint64_t last)
+    void MarkSwitchGranulesCommitted(uint64_t first, uint64_t last)
     {
-        for (uint64_t page = first; page < last; ++page)
-            g_switchCommittedPages[size_t(page / 64u)] |= uint64_t(1) << (page % 64u);
+        for (uint64_t granule = first; granule < last; ++granule)
+            g_switchCommittedGranules[size_t(granule / 64u)] |= uint64_t(1) << (granule % 64u);
     }
 
     bool EnsureSwitchBankChunk(size_t index);
@@ -79,12 +81,12 @@ namespace
                                          uint64_t& begin, uint64_t& end)
     {
         if (!size) return false;
-        constexpr uint64_t kPage = 0x1000;
+        constexpr uint64_t kGranule = kSwitchVirtualGranule;
         const uint64_t requestBegin = uint64_t(address);
         const uint64_t requestEnd = requestBegin + uint64_t(size);
         if (requestEnd > kSpace) return false;
-        begin = requestBegin & ~(kPage - 1);
-        end = (requestEnd + kPage - 1) & ~(kPage - 1);
+        begin = requestBegin & ~(kGranule - 1);
+        end = (requestEnd + kGranule - 1) & ~(kGranule - 1);
         return end <= kSpace;
     }
 
@@ -97,7 +99,7 @@ namespace
         uint64_t begin = 0, end = 0;
         return !SwitchCommitPageRange(0xFFFFFFF0u, 0x11u, begin, end);
     }();
-    static_assert(kLastPageRangeValid, "last guest page must remain committable");
+    static_assert(kLastPageRangeValid, "last guest granule must remain committable");
     static_assert(kPastGuestEndRejected, "guest commit must reject requests past 4 GiB");
 #endif
 }
@@ -140,30 +142,30 @@ bool guest::Commit(uint32_t address, uint32_t size)
             return false;
         }
     }
-    const uint64_t firstPage = begin / 0x1000u;
-    const uint64_t lastPage = end / 0x1000u;
+    const uint64_t firstGranule = begin / kSwitchVirtualGranule;
+    const uint64_t lastGranule = end / kSwitchVirtualGranule;
     std::lock_guard commitLock(g_switchCommitMutex);
-    uint64_t page = firstPage;
-    while (page < lastPage)
+    uint64_t granule = firstGranule;
+    while (granule < lastGranule)
     {
-        if (SwitchPageCommitted(page))
+        if (SwitchGranuleCommitted(granule))
         {
-            ++page;
+            ++granule;
             continue;
         }
-        const uint64_t runBegin = page;
-        while (page < lastPage && !SwitchPageCommitted(page)) ++page;
-        const uint64_t runSize = (page - runBegin) * 0x1000u;
+        const uint64_t runBegin = granule;
+        while (granule < lastGranule && !SwitchGranuleCommitted(granule)) ++granule;
+        const uint64_t runSize = (granule - runBegin) * kSwitchVirtualGranule;
         const Result rc = svcMapPhysicalMemory(
-            g_base + runBegin * 0x1000u, runSize);
+            g_base + runBegin * kSwitchVirtualGranule, runSize);
         if (R_FAILED(rc))
         {
             LOGE("guest: svcMapPhysicalMemory(%08llX, %llu) failed: 0x%08X",
-                 (unsigned long long)(runBegin * 0x1000u),
+                 (unsigned long long)(runBegin * kSwitchVirtualGranule),
                  (unsigned long long)runSize, unsigned(rc));
             return false;
         }
-        MarkSwitchPagesCommitted(runBegin, page);
+        MarkSwitchGranulesCommitted(runBegin, granule);
     }
     return true;
 #else
