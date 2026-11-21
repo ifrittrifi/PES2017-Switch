@@ -765,3 +765,15 @@ Build penuh pada run [44827335012](https://github.com/ifrittrifi/PES2017-Switch/
 Pemeriksaan menemukan blok anonymous namespace ditutup terlalu awal, sehingga fungsi `LoadImage`, `Widen`, dan `BuildFunctionTable` berada di luar scope yang dimaksud, sementara kurung penutup berikutnya menjadi tidak berpasangan. Penutup namespace dipindahkan ke posisi setelah `BuildFunctionTable`.
 
 Perbaikan kode: commit `999ec2bcd457471d018e1c7e153bca70958f8cfd`. Status NRO penuh masih belum terverifikasi; tahap berikutnya adalah menjalankan ulang build penuh dan memeriksa hasil kompilasi, linking, serta packaging.
+
+
+## Catatan inspeksi build 21 November 2026 — rentang 78–100%
+
+Dua workflow berjalan dari commit `999ec2b` dan keduanya gagal, tetapi penyebabnya berbeda:
+
+- Build game penuh, run [44857867397](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44857867397): kompilasi PPC melewati seluruh 1.413 unit, `libppc_recomp.a` berhasil ditautkan pada 95%, lalu runtime mencapai `runtime/main.cpp` pada 97%. Error aktual: `RequestExit` dideklarasikan bukan di namespace yang menaungi `crash`. Ini akibat perbaikan batas namespace sebelumnya yang belum lengkap. Batas anonymous namespace sekarang dipisahkan dengan benar: helper watchdog ditutup sebelum `crash::RequestExit`, lalu namespace anonim baru membungkus `LoadImage`, `Widen`, dan `BuildFunctionTable`. Perbaikan pada commit `fc15594da13435ba7953f38a4798ceb6e54eaeec`.
+- Workflow bootstrap terpisah, run [44857867399](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44857867399): target `check-runtime-input` gagal karena header SIMDe `x86/avx.h` tidak ditemukan. Header tersedia di `third_party/XenonRecomp/thirdparty/simde`; jalur include SIMDe ditambahkan ke pemeriksaan sintaks pada `switch/Makefile`. Perbaikan pada commit `adf26b22a51b8ba11c234ace420e0f8c15b60bab`.
+
+Inspeksi log dari tahap 78% sampai akhir pada build game tidak menemukan error kompilasi PPC sebelumnya atau peringatan compiler yang menjadi penyebab penghentian. PPC selesai dan static library berhasil dibuat. Titik gagal yang benar-benar menghentikan build berada di `runtime/main.cpp` pada 97%; angka 100% tidak tercapai karena build berhenti sebelum linking runtime dan packaging NRO. Jadi belum ada indikasi bahwa kompilasi seluruh PPC perlu diulang akibat kerusakan di rentang 78–94%; kegagalan berada pada tahap akhir runtime.
+
+Status: dua perbaikan telah dikirim; build berikutnya harus memverifikasi keduanya. NRO game penuh belum dihasilkan atau diverifikasi.
