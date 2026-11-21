@@ -25,6 +25,7 @@ extern "C"
 #  include <switch/result.h>
 #  include <switch/kernel/svc.h>
 #  include <switch/kernel/virtmem.h>
+#  include <switch/services/applet.h>
 }
 #else
 #  include <sys/mman.h>
@@ -76,6 +77,43 @@ namespace
     }
 
     bool EnsureSwitchBankChunk(size_t index);
+
+    void LogSwitchMemoryBudget()
+    {
+        const AppletType appletType = appletGetAppletType();
+        u64 rawHandle = 0;
+        const Result info = svcGetInfo(&rawHandle, InfoType_ResourceLimit, INVALID_HANDLE, 0);
+        if (R_FAILED(info))
+        {
+            LOGI("guest: applet type %u; could not query process memory limit: 0x%08X",
+                 unsigned(appletType), unsigned(info));
+            return;
+        }
+
+        const Handle limitHandle = static_cast<Handle>(rawHandle);
+        s64 current = 0;
+        s64 maximum = 0;
+        const Result currentRc = svcGetResourceLimitCurrentValue(
+            &current, limitHandle, LimitableResource_Memory);
+        const Result limitRc = svcGetResourceLimitLimitValue(
+            &maximum, limitHandle, LimitableResource_Memory);
+        if (R_SUCCEEDED(currentRc) && R_SUCCEEDED(limitRc))
+        {
+            LOGI("guest: applet type %u; process memory %lld / %lld MiB used/limit",
+                 unsigned(appletType),
+                 static_cast<long long>(current / (1024 * 1024)),
+                 static_cast<long long>(maximum / (1024 * 1024)));
+        }
+        else
+        {
+            LOGI("guest: applet type %u; memory query failed (current 0x%08X, limit 0x%08X)",
+                 unsigned(appletType), unsigned(currentRc), unsigned(limitRc));
+        }
+        svcCloseHandle(limitHandle);
+
+        if (appletType != AppletType_Application)
+            LOGW("guest: not running as a full Application; launch via HOME Menu title override");
+    }
 
     constexpr bool SwitchCommitPageRange(uint32_t address, uint32_t size,
                                          uint64_t& begin, uint64_t& end)
@@ -399,6 +437,7 @@ namespace
 uint8_t* guest::Initialise()
 {
 #if defined(__SWITCH__)
+    LogSwitchMemoryBudget();
     // Horizon's guest mappings and svcMapPhysicalMemory are page-granular at
     // 4 KiB. Do not route this native path through the POSIX sysconf API.
     LOGI("host pages are %u bytes", 0x1000u);
