@@ -56,6 +56,8 @@ namespace
     }();
     std::mutex g_switchBankMutex;
 
+    bool EnsureSwitchBankChunk(size_t index);
+
     constexpr bool SwitchCommitPageRange(uint32_t address, uint32_t size,
                                          uint64_t& begin, uint64_t& end)
     {
