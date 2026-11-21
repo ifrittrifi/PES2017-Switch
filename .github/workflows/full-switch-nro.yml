@@ -156,7 +156,7 @@ jobs:
               test -s /tmp/nvk-smoke.nro
               file /tmp/nvk-smoke.nro
               echo "CMake configure, NVK static link and NRO packaging smoke test passed."
-CONTAINER_SCRIPT
+          CONTAINER_SCRIPT
             )"
 
       - name: Build full PES runtime and package NRO
