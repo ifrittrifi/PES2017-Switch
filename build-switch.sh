@@ -38,8 +38,8 @@ BUILD_TYPE="${BUILD_TYPE:-Release}"
 JOBS="${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
 BUILD_TARGET="${BUILD_SWITCH_TARGET:-pes17}"
 case "$BUILD_TARGET" in
-  ppc_recomp|pes17) ;;
-  *) fail "unsupported BUILD_SWITCH_TARGET=$BUILD_TARGET (use ppc_recomp or pes17)" ;;
+  configure|ppc_recomp|pes17) ;;
+  *) fail "unsupported BUILD_SWITCH_TARGET=$BUILD_TARGET (use configure, ppc_recomp or pes17)" ;;
 esac
 
 cmake -S "$ROOT" -B "$BUILD_DIR" \
@@ -50,7 +50,9 @@ cmake -S "$ROOT" -B "$BUILD_DIR" \
   -DPES17_USE_SDL=OFF \
   -DPES17_SWITCH_VULKAN_SDK="$PES17_SWITCH_VULKAN_SDK"
 
-cmake --build "$BUILD_DIR" --target "$BUILD_TARGET" --parallel "$JOBS" --verbose
+if [[ "$BUILD_TARGET" != "configure" ]]; then
+  cmake --build "$BUILD_DIR" --target "$BUILD_TARGET" --parallel "$JOBS" --verbose
+fi
 
 if [[ "$BUILD_TARGET" == "pes17" ]]; then
   test -s "$BUILD_DIR/pes17.nro" || fail "CMake completed but pes17.nro was not produced"
