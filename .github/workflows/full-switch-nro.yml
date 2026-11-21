@@ -1,6 +1,6 @@
 name: Full PES 2017 Nintendo Switch NRO
 
-# Keep full builds manual until the staged preflight has passed.
+# Pushes to the project branch run the full build; manual runs can choose preflight or full.
 on:
   push:
     branches:
@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Run preflight only first; select full only after preflight passes"
+        description: "Choose preflight checks or the complete PES 2017 NRO build"
         type: choice
         options:
           - preflight
           - full
-        default: preflight
+        default: full
         required: true
 
 permissions:
@@ -99,6 +99,7 @@ jobs:
             switch-build-${{ runner.os }}-${{ steps.devkitpro-image.outputs.image_id }}-${{ hashFiles('ppc/**/*.cpp', 'ppc/**/*.h', 'runtime/mmio_hook.h', 'cmake/switch-toolchain.cmake') }}-
 
       - name: Preflight CMake configuration and NRO packaging tools
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'preflight' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -181,7 +182,7 @@ jobs:
             '
 
       - name: Build full PES runtime and package NRO
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full' }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full') }}
         shell: bash
         run: |
           set -euo pipefail
