@@ -777,3 +777,12 @@ Dua workflow berjalan dari commit `999ec2b` dan keduanya gagal, tetapi penyebabn
 Inspeksi log dari tahap 78% sampai akhir pada build game tidak menemukan error kompilasi PPC sebelumnya atau peringatan compiler yang menjadi penyebab penghentian. PPC selesai dan static library berhasil dibuat. Titik gagal yang benar-benar menghentikan build berada di `runtime/main.cpp` pada 97%; angka 100% tidak tercapai karena build berhenti sebelum linking runtime dan packaging NRO. Jadi belum ada indikasi bahwa kompilasi seluruh PPC perlu diulang akibat kerusakan di rentang 78–94%; kegagalan berada pada tahap akhir runtime.
 
 Status: dua perbaikan telah dikirim; build berikutnya harus memverifikasi keduanya. NRO game penuh belum dihasilkan atau diverifikasi.
+
+
+## Pembaruan hasil build 21 November 2026 — pemeriksaan SIMDe lulus
+
+Run bootstrap [44868596075](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44868596075) gagal pada commit `fc15594` karena pemeriksaan sintaks `runtime/kernel/input.cpp` belum menemukan `x86/avx.h`. Kegagalan tersebut terjadi sebelum proses build NRO bootstrap; bukan error pada kompilasi game PPC.
+
+Setelah jalur include SIMDe ditambahkan pada `switch/Makefile` (commit `adf26b22a51b8ba11c234ace420e0f8c15b60bab`), run [44868623137](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44868623137) **berhasil**: pemeriksaan sintaks, pembuatan NRO bootstrap, verifikasi file, dan upload artifact semuanya lulus.
+
+Build game penuh [44868596089](https://github.com/ifrittrifi/PES2017-Switch/actions/runs/44868596089) masih berstatus berjalan saat catatan ini dibuat. Tahap validasi input game, pengunduhan/verifikasi BO2 Mesa Horizon Vulkan SDK, dan awal build runtime telah lulus/dimulai; log build aktif belum tersedia untuk inspeksi karena arsip log belum dipublikasikan. Belum boleh dinyatakan gagal atau berhasil sampai job selesai dan artifact `pes17.nro` diverifikasi.
