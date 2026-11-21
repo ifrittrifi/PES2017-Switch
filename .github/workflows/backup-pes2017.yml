@@ -1,0 +1,42 @@
+name: Backup PES2017 repository
+
+on:
+  push:
+    branches:
+      - work/switch-libnx-platform
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Create PES2017.zip
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out complete project branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Create repository backup ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s pes/default.xex
+          test -s ppc/XEX_TARGET
+          zip -qr "$RUNNER_TEMP/PES2017.zip" . -x './.git/*'
+          test -s "$RUNNER_TEMP/PES2017.zip"
+          unzip -tq "$RUNNER_TEMP/PES2017.zip"
+          ls -lh "$RUNNER_TEMP/PES2017.zip"
+          sha256sum "$RUNNER_TEMP/PES2017.zip"
+
+      - name: Upload PES2017.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: PES2017.zip
+          path: ${{ runner.temp }}/PES2017.zip
+          if-no-files-found: error
+          retention-days: 30
