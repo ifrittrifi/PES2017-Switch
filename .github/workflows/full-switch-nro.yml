@@ -108,7 +108,7 @@ jobs:
             -v "$BO2_MESA_SDK:/mesa-sdk:ro" \
             -w /work \
             devkitpro/devkita64:latest \
-            bash -euc '
+            bash -euc "$(cat <<'CONTAINER_SCRIPT'
               export DEVKITPRO=/opt/devkitpro
               export DEVKITA64="$DEVKITPRO/devkitA64"
               export PATH="$DEVKITA64/bin:$DEVKITPRO/tools/bin:$PATH"
@@ -156,7 +156,8 @@ jobs:
               test -s /tmp/nvk-smoke.nro
               file /tmp/nvk-smoke.nro
               echo "CMake configure, NVK static link and NRO packaging smoke test passed."
-            '
+CONTAINER_SCRIPT
+            )"
 
       - name: Build full PES runtime and package NRO
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'full' }}
