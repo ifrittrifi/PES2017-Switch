@@ -117,8 +117,9 @@ jobs:
               # chain in isolation, without compiling any generated PPC files.
               printf '%s\n' \
                 '#include <vulkan/vulkan.h>' \
-                'extern "C" VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vkGetInstanceProcAddr(VkInstance, const char *);' \
-                'int main() { return vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkCreateInstance") ? 0 : 1; }' \
+                '#include <pthread.h>' \
+                'static void *worker(void *p) { return p; }' \
+                'int main() { pthread_t t; if (pthread_create(&t, 0, worker, 0)) return 1; if (pthread_join(t, 0)) return 2; return vkGetInstanceProcAddr(VK_NULL_HANDLE, "vkCreateInstance") ? 0 : 3; }' \
                 >/tmp/nvk-smoke.cpp
               "$DEVKITA64/bin/aarch64-none-elf-gcc" \
                 -I/mesa-sdk/include -c switch/mesa/elf_stubs.c -o /tmp/elf_stubs.o
