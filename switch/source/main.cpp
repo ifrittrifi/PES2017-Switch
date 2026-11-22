@@ -64,8 +64,11 @@ int main(int argc, char* argv[]) {
     const settings::InputOptions inputOptions = settings::GetInputOptions();
 
     switch_input::Initialize();
+    const auto memoryBefore = switch_memory_probe::ReadMemorySnapshot();
     const bool syncOk = RunSyncProbe();
+    const auto memoryAfterSync = switch_memory_probe::ReadMemorySnapshot();
     const auto memoryProbe = switch_memory_probe::Run();
+    const auto memoryAfterGuestProbe = switch_memory_probe::ReadMemorySnapshot();
 
     std::printf("PES 2017 - Nintendo Switch port\n");
     std::printf("--------------------------------\n");
