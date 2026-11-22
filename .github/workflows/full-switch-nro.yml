@@ -8,6 +8,8 @@ on:
       - work/switch-libnx-platform
     paths:
       - .github/workflows/full-switch-nro.yml
+      - runtime/switch/platform.cpp
+      - runtime/guest_memory.cpp
 
 permissions:
   contents: read
