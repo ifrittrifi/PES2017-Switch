@@ -5,9 +5,39 @@ extern "C"
 #include <switch/result.h>
 #include <switch/kernel/svc.h>
 #include <switch/kernel/virtmem.h>
+#include <switch/services/applet.h>
 }
 
 #include <cstdint>
+
+switch_memory_probe::MemorySnapshot switch_memory_probe::ReadMemorySnapshot()
+{
+    MemorySnapshot out{};
+    out.appletType = static_cast<uint32_t>(appletGetAppletType());
+
+    u64 rawHandle = 0;
+    out.query = svcGetInfo(&rawHandle, InfoType_ResourceLimit, INVALID_HANDLE, 0);
+    if (R_FAILED(out.query)) return out;
+
+    const Handle limitHandle = static_cast<Handle>(rawHandle);
+    s64 current = 0;
+    s64 maximum = 0;
+    const Result currentRc = svcGetResourceLimitCurrentValue(
+        &current, limitHandle, LimitableResource_Memory);
+    const Result limitRc = svcGetResourceLimitLimitValue(
+        &maximum, limitHandle, LimitableResource_Memory);
+    svcCloseHandle(limitHandle);
+
+    if (R_FAILED(currentRc)) { out.query = currentRc; return out; }
+    if (R_FAILED(limitRc)) { out.query = limitRc; return out; }
+    if (current < 0 || maximum <= 0) return out;
+
+    out.currentBytes = static_cast<uint64_t>(current);
+    out.limitBytes = static_cast<uint64_t>(maximum);
+    out.available = true;
+    out.query = 0;
+    return out;
+}
 
 switch_memory_probe::ResultInfo switch_memory_probe::Run()
 {
