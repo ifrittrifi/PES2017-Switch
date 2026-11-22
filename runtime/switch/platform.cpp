@@ -12,14 +12,16 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-// NXVK requires a full Application applet (not the Album applet) so Horizon
-// grants the process the GPU/memory budget needed to create its device.
-// Keep the default libnx heap sizing policy: it sizes the heap from the
-// process memory budget rather than reserving an arbitrary fixed amount.
+// This runtime also needs Horizon's physical-memory pool for the Xbox 360
+// guest bank and Vulkan allocations. libnx's automatic heap size (zero) takes
+// almost the entire remaining process budget, leaving only 2 MiB free; that
+// makes the first 4 MiB guest shared-memory chunk fail with 0x00010801.
+// Bound the ordinary C/C++ heap to 512 MiB (a 2 MiB multiple) and leave the
+// rest of the Application memory budget available for guest and GPU memory.
 extern "C"
 {
     u32 __nx_applet_type = AppletType_Application;
-    size_t __nx_heap_size = 0;
+    size_t __nx_heap_size = 512u * 1024u * 1024u;
 }
 
 // libnx does not expose POSIX thread names, backtraces, or dlopen-compatible
@@ -36,7 +38,7 @@ namespace
         void (*body)(void*) = nullptr;
         void* argument = nullptr;
         char name[16]{};
-        };
+    };
 
     // libnx requires the Thread object and its backing stack/TLS to remain
     // alive until the kernel thread has exited and threadClose has run.
