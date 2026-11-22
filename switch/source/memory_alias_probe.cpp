@@ -43,7 +43,10 @@ switch_memory_probe::ResultInfo switch_memory_probe::Run()
 {
     ResultInfo out{};
     constexpr uint64_t kGuestSpace = 0x100000000ull;
-    constexpr size_t kProbeSize = 0x1000;
+    // Match one real runtime guest-bank allocation: the Switch backend
+    // backs its 512 MiB bank with independent 4 MiB shared-memory chunks.
+    // Testing only 4 KiB would miss size-dependent SVC/resource-limit failures.
+    constexpr size_t kProbeSize = 4u * 1024u * 1024u;
     constexpr uint32_t kCommitProbeAddress = 0x10000000u;
     const uint32_t windows[] = { 0x80000000u, 0xA0000000u, 0xC0000000u };
 
