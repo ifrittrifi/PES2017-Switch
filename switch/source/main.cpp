@@ -30,7 +30,7 @@ namespace {
     void PrintMemorySnapshot(const char* label,
                              const switch_memory_probe::MemorySnapshot& snapshot) {
         if (!snapshot.available) {
-            std::printf("  %s: query FAILED (0x%08X)\\n", label,
+            std::printf("  %s: query FAILED (0x%08X)\n", label,
                         unsigned(snapshot.query));
             return;
         }
@@ -38,7 +38,7 @@ namespace {
         const uint64_t limitMiB = snapshot.limitBytes / (1024u * 1024u);
         const uint64_t freeMiB = snapshot.limitBytes > snapshot.currentBytes
             ? (snapshot.limitBytes - snapshot.currentBytes) / (1024u * 1024u) : 0;
-        std::printf("  %s: applet=%u, used=%llu MiB, free=%llu MiB, limit=%llu MiB\\n",
+        std::printf("  %s: applet=%u, used=%llu MiB, free=%llu MiB, limit=%llu MiB\n",
                     label, unsigned(snapshot.appletType),
                     static_cast<unsigned long long>(usedMiB),
                     static_cast<unsigned long long>(freeMiB),
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
     std::printf("PES 2017 - Nintendo Switch port\n");
     std::printf("--------------------------------\n");
     std::printf("Native libnx bootstrap is running.\n");
-    std::printf("Memory budget snapshots (before / after probes):\\n");
+    std::printf("Memory budget snapshots (before / after probes):\n");
     PrintMemorySnapshot("before", memoryBefore);
     PrintMemorySnapshot("after sync", memoryAfterSync);
     PrintMemorySnapshot("after guest RAM", memoryAfterGuestProbe);
