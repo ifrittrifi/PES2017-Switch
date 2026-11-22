@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - work/switch-libnx-platform
+      - work/memory-budget-diagnostics
     paths:
       - .github/workflows/full-switch-nro.yml
       - runtime/switch/platform.cpp
